@@ -1,0 +1,70 @@
+                           ┌──────────────────────────┐
+                           │      PRODUCT OWNER       │
+                           │  Vision, Scope, Features │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                           ┌──────────────────────────┐
+                           │   REQUIREMENTS ENGINEER  │
+                           │  Clear, testable specs   │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                           ┌──────────────────────────┐
+                           │       UX DESIGNER        │
+                           │  Flows, wireframes, IA   │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                     ┌──────────────────────────────────────────┐
+                     │                ARCHITECTS                 │
+                     │ Full‑Stack • Backend • AI/ML Architecture│
+                     └─────────────┬─────────────┬──────────────┘
+                                   │             │
+                                   ▼             ▼
+                           (Architecture Approved?)───No──► Rework UX/Req/PO
+                                   │
+                                   Yes
+                                   ▼
+                           ┌──────────────────────────┐
+                           │        DEVELOPERS        │
+                           │ Full‑Stack + ML/AI Impl. │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                     ┌──────────────────────────────────────────┐
+                     │          ARCHITECT REVIEW ROUND 1        │
+                     │ Validate implementation vs architecture  │
+                     └─────────────┬─────────────┬──────────────┘
+                                   │             │
+                                   │No           │Yes
+                                   ▼             ▼
+                             Developer Rework   Testing Phase
+                                   │
+                                   ▼
+                           ┌──────────────────────────┐
+                           │           QA             │
+                           │ Functional + Visual + AI │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                     ┌──────────────────────────────────────────┐
+                     │          ARCHITECT RE‑REVIEW             │
+                     │ Validate fixes, regressions, stability   │
+                     └─────────────┬─────────────┬──────────────┘
+                                   │             │
+                                   │No           │Yes
+                                   ▼             ▼
+                             Developer Rework   Final Approval
+                                   │
+                                   ▼
+                           ┌──────────────────────────┐
+                           │     FINAL APPROVAL       │
+                           │ Lead Architect + QA Lead │
+                           └─────────────┬────────────┘
+                                         │
+                                         ▼
+                           ┌──────────────────────────┐
+                           │       NEXT PHASE         │
+                           │  Next module or sprint   │
+                           └──────────────────────────┘

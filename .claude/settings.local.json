@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b)",
+      "Bash(move \"architecture-diag.txt\" \"docs\\\\specs\"\" && move \"mermaid-seq-diag.txt\" \"docsspecs\"\")",
+      "Bash(move \"project-overview.txt\" \"docs\\\\specs\"\")",
+      "Bash(dir:*)",
+      "Bash(npm install)",
+      "Bash(npx playwright install chromium)",
+      "Bash(npx playwright test --reporter=list)",
+      "Bash(npm run build:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(npx playwright show-report:*)",
+      "Bash(pip install:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"Get-Process -Name python -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(npx playwright test:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(start http://localhost:5177)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

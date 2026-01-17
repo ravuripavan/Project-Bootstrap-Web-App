@@ -1,0 +1,1000 @@
+# =============================================================================
+# PROJECT BOOTSTRAP ORCHESTRATION SPECIFICATION v2.0
+# =============================================================================
+# This specification defines the complete multi-agent orchestration workflow
+# including Discovery Mode with PO and Architect agents.
+# =============================================================================
+
+orchestration_system:
+  name: project_bootstrap_system
+  version: 2.0.0
+  description: >
+    Multi-agent orchestration system for automated project scaffolding.
+    Supports two modes: Discovery Mode (AI-driven design) and Direct Mode.
+
+  modes:
+    discovery:
+      description: User provides project overview, AI designs product and architecture
+      requires_approval: true
+      phases: [input, product_design, architecture_design, code_generation, quality, scaffolding, summary]
+
+    direct:
+      description: User specifies exact stack, system scaffolds immediately
+      requires_approval: false
+      phases: [input, architecture_design, code_generation, quality, scaffolding, summary]
+
+# =============================================================================
+# INPUT SCHEMAS
+# =============================================================================
+
+schemas:
+
+  # Discovery Mode Input
+  project_overview_schema:
+    type: object
+    required: [project_name, project_overview]
+    properties:
+      project_name: { type: string, minLength: 2, maxLength: 64 }
+      project_overview: { type: string, minLength: 100, maxLength: 5000 }
+      target_users: { type: string, nullable: true }
+      key_features: { type: string, nullable: true }
+      constraints: { type: string, nullable: true }
+      similar_products: { type: string, nullable: true }
+      project_type_hint:
+        type: string
+        enum: [web-app, api, library, cli, ml-project, ai-app, full-platform]
+        nullable: true
+
+  # Direct Mode Input
+  project_spec_schema:
+    type: object
+    required: [project_name, project_path, project_type, language_stack, include_repo, include_ci, include_jira]
+    properties:
+      project_name: { type: string }
+      project_path: { type: string }
+      project_type:
+        type: string
+        enum: [web-app, api, library, cli, monorepo, ml-project, ai-app]
+      language_stack:
+        type: string
+        enum: [python, node, java, go, rust, dotnet, multi]
+      framework: { type: string, nullable: true }
+      include_repo: { type: boolean }
+      include_ci: { type: boolean }
+      include_jira: { type: boolean }
+      ci_provider:
+        type: string
+        enum: [github-actions, gitlab-ci, azure-pipelines]
+        nullable: true
+      vcs_provider:
+        type: string
+        enum: [github, gitlab, bitbucket]
+        nullable: true
+      vcs_config:
+        type: object
+        nullable: true
+        properties:
+          visibility: { type: string, enum: [public, private] }
+          create_remote: { type: boolean }
+          default_branch: { type: string }
+      jira_config:
+        type: object
+        nullable: true
+        properties:
+          key_prefix: { type: string }
+          project_type: { type: string, enum: [scrum, kanban, basic] }
+
+# =============================================================================
+# AGENT DEFINITIONS
+# =============================================================================
+
+agents:
+
+  # ---------------------------------------------------------------------------
+  # ORCHESTRATION
+  # ---------------------------------------------------------------------------
+
+  - id: orchestration_agent
+    name: OrchestrationAgent
+    category: orchestration
+    role: >
+      Master coordinator that manages the entire workflow:
+      - Determines workflow mode (Discovery vs Direct)
+      - Selects appropriate agents based on project type
+      - Manages agent execution order and dependencies
+      - Handles user approval gates
+      - Coordinates parallel agent execution
+      - Aggregates and consolidates agent outputs
+
+  # ---------------------------------------------------------------------------
+  # PRODUCT DESIGN (Discovery Mode)
+  # ---------------------------------------------------------------------------
+
+  - id: po_agent
+    name: ProductOwnerAgent
+    category: design
+    role: >
+      Product Owner that transforms project overview into structured design:
+      - Analyzes project overview for completeness
+      - Identifies and defines user personas
+      - Breaks down features into epics and user stories
+      - Defines acceptance criteria
+      - Recommends MVP scope
+      - Identifies risks and dependencies
+
+    input_schema:
+      type: object
+      properties:
+        project_overview: { $ref: "#/schemas/project_overview_schema" }
+        context: { type: object }
+
+    output_schema:
+      type: object
+      properties:
+        product_design:
+          type: object
+          properties:
+            project_name: { type: string }
+            vision: { type: string }
+            goals: { type: array, items: { type: string } }
+            personas: { type: array }
+            epics: { type: array }
+            mvp_scope: { type: object }
+            risks: { type: array }
+            success_metrics: { type: array }
+
+  # ---------------------------------------------------------------------------
+  # ARCHITECT AGENTS
+  # ---------------------------------------------------------------------------
+
+  - id: fullstack_architect_agent
+    name: FullStackArchitectAgent
+    category: architecture
+    role: >
+      Full-stack architect responsible for:
+      - Overall system design and tech stack selection
+      - Integration patterns between frontend and backend
+      - End-to-end data flow design
+      - Coordinating with specialized architects
+    activation_rules:
+      project_types: [web-app, ai-app, full-platform]
+
+  - id: backend_architect_agent
+    name: BackendArchitectAgent
+    category: architecture
+    role: >
+      Backend architect responsible for:
+      - API design and service architecture
+      - Business logic layer design
+      - Microservices decomposition (if applicable)
+      - Backend technology selection
+    activation_rules:
+      project_types: [web-app, api, ml-project, ai-app, full-platform]
+
+  - id: frontend_architect_agent
+    name: FrontendArchitectAgent
+    category: architecture
+    role: >
+      Frontend architect responsible for:
+      - UI architecture and component structure
+      - State management strategy
+      - UX patterns and design system
+      - Frontend framework selection
+    activation_rules:
+      project_types: [web-app, ai-app, full-platform]
+
+  - id: database_architect_agent
+    name: DatabaseArchitectAgent
+    category: architecture
+    role: >
+      Database architect responsible for:
+      - Data modeling and schema design
+      - Database technology selection
+      - Query optimization strategies
+      - Migration planning
+    activation_rules:
+      project_types: [web-app, api, ml-project, ai-app, full-platform]
+
+  - id: infrastructure_architect_agent
+    name: InfrastructureArchitectAgent
+    category: architecture
+    role: >
+      Infrastructure/DevOps architect responsible for:
+      - Cloud architecture design
+      - Deployment strategy
+      - Scaling and performance
+      - Infrastructure as Code patterns
+      - CI/CD pipeline architecture
+    activation_rules:
+      project_types: [all]
+
+  - id: security_architect_agent
+    name: SecurityArchitectAgent
+    category: architecture
+    role: >
+      Security architect responsible for:
+      - Authentication and authorization design
+      - Data protection strategies
+      - Compliance requirements (GDPR, SOC2, etc.)
+      - Threat modeling
+      - Security best practices
+    activation_rules:
+      project_types: [web-app, api, ai-app, full-platform]
+
+  - id: ml_architect_agent
+    name: MLArchitectAgent
+    category: architecture
+    role: >
+      Machine Learning architect responsible for:
+      - ML pipeline design
+      - Model architecture selection
+      - Feature engineering strategy
+      - MLOps and model deployment
+      - Training infrastructure
+    activation_rules:
+      project_types: [ml-project, full-platform]
+
+  - id: ai_architect_agent
+    name: AIArchitectAgent
+    category: architecture
+    role: >
+      AI/LLM architect responsible for:
+      - LLM integration architecture
+      - Prompt engineering patterns
+      - RAG (Retrieval Augmented Generation) design
+      - AI agent orchestration
+      - Token optimization and caching
+    activation_rules:
+      project_types: [ai-app, full-platform]
+
+  # ---------------------------------------------------------------------------
+  # DEVELOPER AGENTS
+  # ---------------------------------------------------------------------------
+
+  - id: fullstack_developer_agent
+    name: FullStackDeveloperAgent
+    category: development
+    role: >
+      Full-stack developer responsible for:
+      - End-to-end feature implementation
+      - API integration between frontend and backend
+      - Cross-layer functionality
+    activation_rules:
+      project_types: [web-app, ai-app, full-platform]
+
+  - id: backend_developer_agent
+    name: BackendDeveloperAgent
+    category: development
+    role: >
+      Backend developer responsible for:
+      - API endpoint implementation
+      - Business logic implementation
+      - Database queries and migrations
+      - External service integrations
+    activation_rules:
+      project_types: [web-app, api, ml-project, ai-app, full-platform]
+
+  - id: frontend_developer_agent
+    name: FrontendDeveloperAgent
+    category: development
+    role: >
+      Frontend developer responsible for:
+      - UI component implementation
+      - State management implementation
+      - Responsive design
+      - Client-side routing
+    activation_rules:
+      project_types: [web-app, ai-app, full-platform]
+
+  - id: aiml_developer_agent
+    name: AIMLDeveloperAgent
+    category: development
+    role: >
+      AI/ML developer responsible for:
+      - ML model implementation
+      - Training pipeline development
+      - Inference service implementation
+      - LLM integration code
+      - Prompt templates
+    activation_rules:
+      project_types: [ml-project, ai-app, full-platform]
+
+  # ---------------------------------------------------------------------------
+  # SUPPORT AGENTS
+  # ---------------------------------------------------------------------------
+
+  - id: testing_agent
+    name: TestingAgent
+    category: support
+    role: >
+      QA/Testing agent responsible for:
+      - Unit test generation
+      - Integration test generation
+      - E2E test generation
+      - Test fixtures and mocks
+      - Test configuration
+    activation_rules:
+      project_types: [all]
+
+  - id: cicd_agent
+    name: CICDAgent
+    category: support
+    role: >
+      CI/CD agent responsible for:
+      - CI/CD workflow generation
+      - Dockerfile creation
+      - Deployment configuration
+      - Environment setup
+      - Build scripts
+    activation_rules:
+      project_types: [all]
+
+  - id: documentation_agent
+    name: DocumentationAgent
+    category: support
+    role: >
+      Documentation agent responsible for:
+      - README generation
+      - API documentation
+      - Architecture documentation
+      - Developer guides
+      - Setup instructions
+    activation_rules:
+      project_types: [all]
+
+  # ---------------------------------------------------------------------------
+  # SCAFFOLDING AGENTS (Original)
+  # ---------------------------------------------------------------------------
+
+  - id: filesystem_scaffolder_agent
+    name: FilesystemScaffolderAgent
+    category: scaffolding
+    role: Create directories and scaffold files.
+
+  - id: git_repo_provisioner_agent
+    name: GitRepoProvisionerAgent
+    category: scaffolding
+    role: Initialize git repo and create remote.
+
+  - id: workflow_generator_agent
+    name: WorkflowGeneratorAgent
+    category: scaffolding
+    role: Generate CI/CD workflow files from templates.
+
+  - id: jira_space_provisioner_agent
+    name: JiraSpaceProvisionerAgent
+    category: scaffolding
+    role: Create Jira project and initial issues.
+
+  - id: summary_reporter_agent
+    name: SummaryReporterAgent
+    category: scaffolding
+    role: Produce final summary with next steps.
+
+  # ---------------------------------------------------------------------------
+  # DOMAIN EXPERT AGENTS (Dynamic - Activated at Runtime)
+  # ---------------------------------------------------------------------------
+
+  - id: healthcare_expert_agent
+    name: HealthcareExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Healthcare domain expert responsible for:
+      - HIPAA compliance requirements
+      - HL7/FHIR integration patterns
+      - PHI (Protected Health Information) handling
+      - Medical data security best practices
+      - EHR/EMR integration guidance
+    activation_keywords:
+      - health
+      - medical
+      - patient
+      - clinical
+      - hospital
+      - diagnosis
+      - treatment
+      - HIPAA
+      - EHR
+      - EMR
+      - healthcare
+      - doctor
+      - nurse
+      - prescription
+      - pharmacy
+      - telemedicine
+    confidence_threshold: 0.7
+
+  - id: finance_expert_agent
+    name: FinanceExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Financial services domain expert responsible for:
+      - PCI-DSS compliance
+      - SOX compliance requirements
+      - Secure transaction patterns
+      - Financial data encryption
+      - Audit trail requirements
+      - Anti-fraud measures
+    activation_keywords:
+      - bank
+      - banking
+      - payment
+      - transaction
+      - trading
+      - stock
+      - investment
+      - loan
+      - credit
+      - debit
+      - fintech
+      - PCI
+      - SOX
+      - financial
+      - money
+      - wallet
+      - ledger
+    confidence_threshold: 0.7
+
+  - id: ecommerce_expert_agent
+    name: EcommerceExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      E-commerce domain expert responsible for:
+      - Payment gateway integration patterns
+      - Inventory management best practices
+      - Order lifecycle management
+      - Shopping cart patterns
+      - Fraud prevention strategies
+      - Tax calculation integration
+    activation_keywords:
+      - shop
+      - shopping
+      - cart
+      - checkout
+      - product
+      - catalog
+      - order
+      - inventory
+      - ecommerce
+      - store
+      - merchant
+      - customer
+      - purchase
+      - retail
+    confidence_threshold: 0.7
+
+  - id: edtech_expert_agent
+    name: EdTechExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Education technology domain expert responsible for:
+      - LMS integration patterns
+      - WCAG accessibility compliance
+      - FERPA student data privacy
+      - Course content delivery patterns
+      - Assessment and grading systems
+    activation_keywords:
+      - learning
+      - course
+      - student
+      - education
+      - school
+      - university
+      - LMS
+      - training
+      - curriculum
+      - assessment
+      - grade
+      - classroom
+      - teacher
+      - FERPA
+    confidence_threshold: 0.7
+
+  - id: iot_expert_agent
+    name: IoTExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      IoT domain expert responsible for:
+      - MQTT/CoAP protocol implementation
+      - Edge computing patterns
+      - Device security and authentication
+      - Real-time telemetry handling
+      - Firmware update strategies
+    activation_keywords:
+      - sensor
+      - device
+      - embedded
+      - telemetry
+      - IoT
+      - connected
+      - smart
+      - MQTT
+      - edge
+      - firmware
+      - gateway
+      - actuator
+    confidence_threshold: 0.7
+
+  - id: gaming_expert_agent
+    name: GamingExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Gaming domain expert responsible for:
+      - Game loop architecture
+      - Multiplayer networking patterns
+      - Anti-cheat implementation
+      - Player data management
+      - Real-time synchronization
+    activation_keywords:
+      - game
+      - gaming
+      - player
+      - multiplayer
+      - score
+      - level
+      - match
+      - leaderboard
+      - realtime
+      - lobby
+    confidence_threshold: 0.7
+
+  - id: social_expert_agent
+    name: SocialExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Social media domain expert responsible for:
+      - Social graph patterns
+      - Content moderation strategies
+      - Feed algorithm considerations
+      - Real-time notifications
+      - User engagement patterns
+    activation_keywords:
+      - social
+      - feed
+      - post
+      - community
+      - follow
+      - like
+      - share
+      - comment
+      - friend
+      - network
+      - timeline
+      - notification
+    confidence_threshold: 0.7
+
+  - id: legaltech_expert_agent
+    name: LegalTechExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Legal technology domain expert responsible for:
+      - Legal document management
+      - E-signature integration
+      - Audit trail requirements
+      - Document confidentiality
+      - Contract lifecycle management
+    activation_keywords:
+      - contract
+      - legal
+      - compliance
+      - document
+      - attorney
+      - law
+      - signature
+      - esign
+      - clause
+      - agreement
+      - regulation
+    confidence_threshold: 0.7
+
+  - id: logistics_expert_agent
+    name: LogisticsExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      Logistics domain expert responsible for:
+      - Route optimization patterns
+      - Real-time tracking systems
+      - Warehouse management patterns
+      - Delivery scheduling
+      - Supply chain visibility
+    activation_keywords:
+      - shipping
+      - tracking
+      - warehouse
+      - delivery
+      - logistics
+      - supply chain
+      - fleet
+      - route
+      - carrier
+      - freight
+      - package
+    confidence_threshold: 0.7
+
+  - id: hrtech_expert_agent
+    name: HRTechExpertAgent
+    category: domain_expert
+    dynamic: true
+    role: >
+      HR technology domain expert responsible for:
+      - Employee data privacy
+      - Payroll integration patterns
+      - Compliance requirements (EEOC, etc.)
+      - Recruitment workflow patterns
+      - Performance management systems
+    activation_keywords:
+      - employee
+      - hiring
+      - payroll
+      - HR
+      - recruitment
+      - onboarding
+      - benefits
+      - performance
+      - applicant
+      - workforce
+      - talent
+    confidence_threshold: 0.7
+
+# =============================================================================
+# DOMAIN EXPERT ACTIVATION ENGINE
+# =============================================================================
+
+domain_expert_engine:
+  description: >
+    Dynamic activation of domain expert agents based on project content analysis.
+    Multiple experts can be activated for cross-domain projects.
+
+  activation:
+    trigger: content_analysis
+    sources:
+      - project_overview
+      - key_features
+      - constraints
+      - similar_products
+
+    algorithm:
+      type: keyword_matching_with_nlp
+      steps:
+        - extract_keywords_from_sources
+        - match_against_activation_keywords
+        - calculate_confidence_scores
+        - filter_by_threshold
+        - rank_by_confidence
+
+    multi_domain:
+      enabled: true
+      max_experts: 3
+      strategy: highest_confidence_first
+      overlap_handling: merge_recommendations
+
+  expert_integration:
+    phase: architecture_design
+    execution: parallel_with_architects
+    output_merge:
+      - add_compliance_requirements_to_security
+      - add_domain_patterns_to_architecture
+      - add_domain_libraries_to_stack
+
+  output_schema:
+    type: object
+    properties:
+      domain: { type: string }
+      compliance_requirements: { type: array }
+      recommended_patterns: { type: array }
+      recommended_libraries: { type: array }
+      security_considerations: { type: array }
+      common_pitfalls: { type: array }
+      best_practices: { type: array }
+      integration_points: { type: array }
+
+# =============================================================================
+# WORKFLOW DEFINITIONS
+# =============================================================================
+
+workflows:
+
+  # ---------------------------------------------------------------------------
+  # DISCOVERY MODE WORKFLOW
+  # ---------------------------------------------------------------------------
+
+  discovery_mode:
+    name: AI Discovery Workflow
+    description: Full AI-driven product and architecture design flow
+
+    phases:
+
+      # Phase 0: Input
+      - name: input
+        steps:
+          - id: receive_overview
+            description: Receive and validate project overview from user
+            output: project_overview
+
+      # Phase 1: Product Design
+      - name: product_design
+        requires_approval: true
+        steps:
+          - id: generate_product_design
+            agent: ProductOwnerAgent
+            input:
+              project_overview: project_overview
+            output: product_design
+
+          - id: user_approval_product
+            type: approval_gate
+            message: "Review and approve product design"
+            on_reject: goto(generate_product_design)
+            on_approve: continue
+
+      # Phase 2: Architecture Design
+      - name: architecture_design
+        requires_approval: true
+        execution_model: parallel_then_consolidate
+        steps:
+          # Parallel architect execution
+          - id: architect_analysis
+            parallel: true
+            agents:
+              - agent: FullStackArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: BackendArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: FrontendArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: DatabaseArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: InfrastructureArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: SecurityArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: MLArchitectAgent
+                when: activation_rules.match(project_type)
+              - agent: AIArchitectAgent
+                when: activation_rules.match(project_type)
+            input:
+              product_design: product_design
+            output: architect_drafts
+
+          # Consolidation
+          - id: consolidate_architecture
+            description: Resolve conflicts and consolidate architect outputs
+            input:
+              architect_drafts: architect_drafts
+            output: architecture_design
+
+          # User approval
+          - id: user_approval_architecture
+            type: approval_gate
+            message: "Review architecture design and technology stack"
+            on_reject: goto(architect_analysis)
+            on_approve: continue
+
+      # Phase 3: Code Generation
+      - name: code_generation
+        execution_model: parallel
+        steps:
+          - id: developer_implementation
+            parallel: true
+            agents:
+              - agent: FullStackDeveloperAgent
+                when: activation_rules.match(project_type)
+              - agent: BackendDeveloperAgent
+                when: activation_rules.match(project_type)
+              - agent: FrontendDeveloperAgent
+                when: activation_rules.match(project_type)
+              - agent: AIMLDeveloperAgent
+                when: activation_rules.match(project_type)
+            input:
+              architecture_design: architecture_design
+              product_design: product_design
+            output: generated_code
+
+      # Phase 4: Quality & DevOps
+      - name: quality
+        execution_model: parallel
+        steps:
+          - id: support_tasks
+            parallel: true
+            agents:
+              - agent: TestingAgent
+              - agent: CICDAgent
+              - agent: DocumentationAgent
+            input:
+              architecture_design: architecture_design
+              generated_code: generated_code
+            output: support_artifacts
+
+      # Phase 5: Scaffolding
+      - name: scaffolding
+        execution_model: dependency_graph
+        steps:
+          - id: scaffold_filesystem
+            agent: FilesystemScaffolderAgent
+            input:
+              generated_code: generated_code
+              support_artifacts: support_artifacts
+            output: filesystem_result
+
+          - id: setup_git
+            agent: GitRepoProvisionerAgent
+            depends_on: [scaffold_filesystem]
+            when: project_spec.include_repo == true
+            output: git_result
+
+          - id: generate_workflows
+            agent: WorkflowGeneratorAgent
+            depends_on: [setup_git]
+            when: project_spec.include_ci == true
+            output: workflow_result
+
+          - id: create_jira_space
+            agent: JiraSpaceProvisionerAgent
+            depends_on: [setup_git]
+            when: project_spec.include_jira == true
+            output: jira_result
+
+      # Phase 6: Summary
+      - name: summary
+        steps:
+          - id: generate_summary
+            agent: SummaryReporterAgent
+            input:
+              product_design: product_design
+              architecture_design: architecture_design
+              filesystem_result: filesystem_result
+              git_result: git_result
+              workflow_result: workflow_result
+              jira_result: jira_result
+            output: summary
+
+  # ---------------------------------------------------------------------------
+  # DIRECT MODE WORKFLOW
+  # ---------------------------------------------------------------------------
+
+  direct_mode:
+    name: Direct Scaffolding Workflow
+    description: Quick scaffolding with user-specified stack
+
+    phases:
+
+      - name: input
+        steps:
+          - id: receive_spec
+            description: Receive and validate project specification
+            output: project_spec
+
+      - name: architecture_design
+        execution_model: parallel
+        steps:
+          - id: quick_architecture
+            parallel: true
+            agents:
+              - agent: InfrastructureArchitectAgent
+              - agent: SecurityArchitectAgent
+            input:
+              project_spec: project_spec
+            output: architecture_design
+
+      - name: scaffolding
+        execution_model: dependency_graph
+        steps:
+          - id: scaffold_filesystem
+            agent: FilesystemScaffolderAgent
+            output: filesystem_result
+
+          - id: setup_git
+            agent: GitRepoProvisionerAgent
+            depends_on: [scaffold_filesystem]
+            when: project_spec.include_repo == true
+            output: git_result
+
+          - id: generate_workflows
+            agent: WorkflowGeneratorAgent
+            depends_on: [setup_git]
+            when: project_spec.include_ci == true
+            output: workflow_result
+
+          - id: create_jira_space
+            agent: JiraSpaceProvisionerAgent
+            depends_on: [setup_git]
+            when: project_spec.include_jira == true
+            output: jira_result
+
+      - name: summary
+        steps:
+          - id: generate_summary
+            agent: SummaryReporterAgent
+            output: summary
+
+# =============================================================================
+# AGENT ACTIVATION MATRIX
+# =============================================================================
+
+activation_matrix:
+  # Maps project types to activated agents
+
+  web-app:
+    architects: [fullstack, backend, frontend, database, infrastructure, security]
+    developers: [fullstack, backend, frontend]
+    support: [testing, cicd, documentation]
+
+  api:
+    architects: [backend, database, infrastructure, security]
+    developers: [backend]
+    support: [testing, cicd, documentation]
+
+  library:
+    architects: [backend, infrastructure]
+    developers: [backend]
+    support: [testing, cicd, documentation]
+
+  cli:
+    architects: [backend, infrastructure]
+    developers: [backend]
+    support: [testing, cicd, documentation]
+
+  ml-project:
+    architects: [fullstack, backend, database, infrastructure, ml]
+    developers: [backend, aiml]
+    support: [testing, cicd, documentation]
+
+  ai-app:
+    architects: [fullstack, backend, frontend, database, infrastructure, security, ai]
+    developers: [fullstack, aiml]
+    support: [testing, cicd, documentation]
+
+  full-platform:
+    architects: [fullstack, backend, frontend, database, infrastructure, security, ml, ai]
+    developers: [fullstack, backend, frontend, aiml]
+    support: [testing, cicd, documentation]
+
+# =============================================================================
+# COORDINATION RULES
+# =============================================================================
+
+coordination:
+
+  architect_consolidation:
+    description: Rules for resolving conflicts between architect recommendations
+    rules:
+      - priority_order: [security, infrastructure, fullstack, backend, frontend, database, ml, ai]
+      - conflict_resolution: security_wins_on_auth, infrastructure_wins_on_deploy
+      - required_alignment: [api_contracts, data_models, auth_strategy]
+
+  developer_coordination:
+    description: Rules for developer agent collaboration
+    rules:
+      - shared_contracts: api_specs, data_models, type_definitions
+      - dependency_order: backend_before_frontend_integration
+      - parallel_allowed: [frontend_components, backend_services]
+
+# =============================================================================
+# ERROR HANDLING
+# =============================================================================
+
+error_handling:
+
+  agent_failure:
+    retry_count: 3
+    retry_delay_ms: 1000
+    backoff_multiplier: 2
+    on_max_retries: notify_user
+
+  approval_timeout:
+    timeout_hours: 24
+    on_timeout: save_state_and_notify
+
+  partial_failure:
+    strategy: continue_with_available
+    notify_user: true
+    allow_manual_retry: true

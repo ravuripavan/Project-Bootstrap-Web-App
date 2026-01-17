@@ -1,0 +1,189 @@
+orchestration_system:
+  name: project_bootstrap_system
+  version: 1.0.0
+
+  entrypoint:
+    agent: OrchestrationAgent
+    input: OrchestrationSpec
+    output: OrchestrationResult
+
+  orchestration_spec_schema:
+    type: object
+    required:
+      - project_name
+      - project_path
+      - project_type
+      - language_stack
+      - include_repo
+      - include_ci
+      - include_jira
+    properties:
+      project_name: { type: string }
+      project_path: { type: string }
+      project_type: { type: string }
+      language_stack: { type: string }
+      include_repo: { type: boolean }
+      include_ci: { type: boolean }
+      include_jira: { type: boolean }
+      ci_provider: { type: string, nullable: true }
+      vcs_provider: { type: string, nullable: true }
+      jira_config:
+        type: object
+        nullable: true
+        properties:
+          key_prefix: { type: string }
+          project_type: { type: string }
+
+agents:
+
+  # ---------------------------------------------------------
+  # 0. ORCHESTRATION AGENT (NEW)
+  # ---------------------------------------------------------
+  - id: orchestration_agent
+    name: OrchestrationAgent
+    role: >
+      Master coordinator that:
+      - Validates the orchestration spec
+      - Delegates to collector, validator, template selector, plan builder
+      - Executes plan tasks by dispatching to domain agents
+      - Aggregates all results into a final summary
+
+    input_schema:
+      type: object
+      properties:
+        orchestration_spec:
+          $ref: "#/orchestration_system/orchestration_spec_schema"
+
+    output_schema:
+      type: object
+      properties:
+        plan: { type: object }
+        execution_log: { type: array }
+        final_result: { type: object }
+
+  # ---------------------------------------------------------
+  # 1. SPEC COLLECTION
+  # ---------------------------------------------------------
+  - id: project_spec_collector_agent
+    name: ProjectSpecCollectorAgent
+    role: Normalize OrchestrationSpec into ProjectSpec.
+
+  - id: spec_validator_agent
+    name: SpecValidatorAgent
+    role: Validate ProjectSpec for correctness.
+
+  # ---------------------------------------------------------
+  # 2. TEMPLATE RESOLUTION
+  # ---------------------------------------------------------
+  - id: template_selector_agent
+    name: TemplateSelectorAgent
+    role: Select directory + workflow templates.
+
+  - id: plan_builder_agent
+    name: PlanBuilderAgent
+    role: Build deterministic execution plan.
+
+  # ---------------------------------------------------------
+  # 3. EXECUTION AGENTS
+  # ---------------------------------------------------------
+  - id: filesystem_scaffolder_agent
+    name: FilesystemScaffolderAgent
+    role: Create directories and scaffold files.
+
+  - id: git_repo_provisioner_agent
+    name: GitRepoProvisionerAgent
+    role: Initialize git repo and remote.
+
+  - id: workflow_generator_agent
+    name: WorkflowGeneratorAgent
+    role: Generate CI/CD workflow files.
+
+  - id: jira_space_provisioner_agent
+    name: JiraSpaceProvisionerAgent
+    role: Create Jira project and initial issues.
+
+  # ---------------------------------------------------------
+  # 4. SUMMARY
+  # ---------------------------------------------------------
+  - id: summary_reporter_agent
+    name: SummaryReporterAgent
+    role: Produce final CLI-friendly summary.
+
+workflow:
+  phases:
+
+    - name: collect_and_validate
+      steps:
+        - collect_spec:
+            agent: ProjectSpecCollectorAgent
+            input: orchestration_spec
+            output: project_spec
+
+        - validate_spec:
+            agent: SpecValidatorAgent
+            input: project_spec
+            output: validation_result
+            on_failure: stop
+
+    - name: resolve_templates
+      steps:
+        - select_templates:
+            agent: TemplateSelectorAgent
+            input: project_spec
+            output: template_bundle
+
+        - build_plan:
+            agent: PlanBuilderAgent
+            input:
+              project_spec: project_spec
+              template_bundle: template_bundle
+            output: plan
+
+    - name: execute_plan
+      execution_model: dependency_graph
+      steps:
+        - scaffold_filesystem:
+            agent: FilesystemScaffolderAgent
+            input:
+              project_spec: project_spec
+              plan: plan
+            output: filesystem_result
+
+        - setup_git:
+            agent: GitRepoProvisionerAgent
+            depends_on: [scaffold_filesystem]
+            when: project_spec.include_repo == true
+            input:
+              project_spec: project_spec
+              plan: plan
+            output: git_result
+
+        - generate_workflows:
+            agent: WorkflowGeneratorAgent
+            depends_on: [setup_git]
+            when: project_spec.include_ci == true
+            input:
+              project_spec: project_spec
+              plan: plan
+            output: workflow_result
+
+        - create_jira_space:
+            agent: JiraSpaceProvisionerAgent
+            depends_on: [setup_git]
+            when: project_spec.include_jira == true
+            input:
+              project_spec: project_spec
+              plan: plan
+            output: jira_result
+
+    - name: summarize
+      steps:
+        - summarize_results:
+            agent: SummaryReporterAgent
+            input:
+              project_spec: project_spec
+              filesystem_result: filesystem_result
+              git_result: git_result
+              workflow_result: workflow_result
+              jira_result: jira_result
+            output: summary

@@ -1,0 +1,172 @@
+Below is a **full architecture diagram** (ASCII) plus a **layered explanation** so you can plug it directly into your web app.
+
+---
+
+# 🏗️ **Full Architecture Diagram (Web App + CLI Agent Orchestration)**
+
+```text
+                          ┌───────────────────────────────┐
+                          │           Web App UI           │
+                          │  - User selects project type   │
+                          │  - Provides path, stack, etc.  │
+                          └───────────────┬───────────────┘
+                                          │
+                                          v
+                          ┌───────────────────────────────┐
+                          │        Web App Backend         │
+                          │  - Receives user request       │
+                          │  - Builds Orchestration Spec   │
+                          │  - Calls Orchestrator API      │
+                          └───────────────┬───────────────┘
+                                          │
+                                          v
+                    ┌────────────────────────────────────────────┐
+                    │           Orchestration Engine              │
+                    │  - Validates spec                          │
+                    │  - Selects agents                          │
+                    │  - Builds execution plan                   │
+                    │  - Executes agents in order                │
+                    │  - Collects outputs                        │
+                    └───────────────┬────────────────────────────┘
+                                    │
+                                    v
+        ┌──────────────────────────────────────────────────────────────────────┐
+        │                           Agent Layer                                │
+        │                                                                        │
+        │  ┌──────────────────────┐   ┌──────────────────────┐                  │
+        │  │ ProjectSpecCollector │   │   SpecValidator       │                  │
+        │  └──────────────────────┘   └──────────────────────┘                  │
+        │                                                                        │
+        │  ┌──────────────────────┐   ┌──────────────────────┐                  │
+        │  │ TemplateSelector     │   │    PlanBuilder        │                  │
+        │  └──────────────────────┘   └──────────────────────┘                  │
+        │                                                                        │
+        │  ┌──────────────────────┐   ┌──────────────────────┐   ┌────────────┐│
+        │  │ FilesystemScaffolder │   │ GitRepoProvisioner   │   │ WorkflowGen││
+        │  └──────────────────────┘   └──────────────────────┘   └────────────┘│
+        │                                                                        │
+        │  ┌──────────────────────┐   ┌──────────────────────┐                  │
+        │  │ JiraProvisioner      │   │ SummaryReporter       │                  │
+        │  └──────────────────────┘   └──────────────────────┘                  │
+        └──────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    v
+                    ┌────────────────────────────────────────────┐
+                    │        Integration Layer (APIs)             │
+                    │  - Jira API                                 │
+                    │  - GitHub/GitLab API                        │
+                    │  - CI/CD Providers                          │
+                    │  - Cloud Providers (optional)               │
+                    └────────────────────────────────────────────┘
+                                    │
+                                    v
+                    ┌────────────────────────────────────────────┐
+                    │        Local System / Filesystem            │
+                    │  - Directory creation                       │
+                    │  - File scaffolding                         │
+                    │  - Local git init                           │
+                    └────────────────────────────────────────────┘
+```
+
+---
+
+# 🧱 **Layer‑by‑Layer Explanation**
+
+## **1. Web App UI**
+Your user interacts with a simple interface:
+- Project name  
+- Path  
+- Language stack  
+- Include Jira?  
+- Include CI?  
+- Include repo?  
+
+The UI sends a structured request to the backend.
+
+---
+
+## **2. Web App Backend**
+This layer:
+- Normalizes the request  
+- Builds an **OrchestrationSpec**  
+- Sends it to the Orchestration Engine  
+
+This is where you enforce:
+- Authentication  
+- Org defaults  
+- User permissions  
+
+---
+
+## **3. Orchestration Engine**
+This is the **brain** of the system.
+
+It:
+- Validates the spec  
+- Selects the correct agents  
+- Builds a deterministic execution plan  
+- Executes agents in order  
+- Collects outputs  
+- Sends results back to the web app  
+
+This is where your multi‑agent orchestration expertise shines.
+
+---
+
+## **4. Agent Layer**
+Each agent is a **single‑responsibility module**.
+
+Agents include:
+- ProjectSpecCollectorAgent  
+- SpecValidatorAgent  
+- TemplateSelectorAgent  
+- PlanBuilderAgent  
+- FilesystemScaffolderAgent  
+- GitRepoProvisionerAgent  
+- WorkflowGeneratorAgent  
+- JiraSpaceProvisionerAgent  
+- SummaryReporterAgent  
+
+Each agent receives:
+- `plan_step`
+- `project_spec`
+- `context`
+
+Each agent returns:
+- `status`
+- `output`
+- `errors`
+
+---
+
+## **5. Integration Layer**
+This layer handles external systems:
+- Jira REST API  
+- GitHub/GitLab API  
+- CI/CD providers  
+- Cloud providers (optional)  
+
+Agents never call APIs directly — they call the Integration Layer.
+
+---
+
+## **6. Local System / Filesystem**
+Used by:
+- FilesystemScaffolderAgent  
+- GitRepoProvisionerAgent  
+
+This is where:
+- Directories are created  
+- Files are scaffolded  
+- Git repos are initialized  
+
+---
+
+# If you want, I can also generate:
+- A **clean PNG diagram** (if you want a visual version)  
+- A **PlantUML version**  
+- A **Mermaid.js version** for embedding in your web app  
+- A **full agent‑orchestration YAML spec**  
+- A **backend API contract** for your web app  
+
+Just tell me which format you want next.

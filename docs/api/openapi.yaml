@@ -1,0 +1,1080 @@
+openapi: 3.0.3
+info:
+  title: Project Bootstrap Web App API
+  description: |
+    Multi-agent orchestration system for automated project scaffolding and setup.
+
+    ## Overview
+
+    The Project Bootstrap API enables automated creation of new software projects with integrated tooling
+    for Git, CI/CD, and Jira. The system supports two operational modes:
+
+    - **Discovery Mode**: Users provide a project overview, and the system generates specifications
+    - **Direct Mode**: Users specify exact stack and configuration upfront
+
+    ## Authentication
+
+    Currently authentication is optional but prepared for integration with Bearer tokens (JWT).
+    See `securitySchemes` section for details.
+
+    ## Workflow Phases
+
+    Projects progress through phases:
+    1. **Input** - Specification collection and validation
+    2. **Designing** - Product design and architecture planning (requires approval)
+    3. **Executing** - Implementation and provisioning
+    4. **Completed** - Project ready
+
+    ## WebSocket Real-time Updates
+
+    Connect to `/ws/projects/{project_id}` for real-time workflow progress updates.
+
+    ## Integration Points
+
+    - GitHub/GitLab API for repository management
+    - Jira REST API for project/issue tracking
+    - CI/CD providers (GitHub Actions, GitLab CI, Azure Pipelines)
+    - Local filesystem operations
+
+  version: 1.0.0
+  contact:
+    name: Project Bootstrap Team
+    email: support@bootstrap.local
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+    variables:
+      protocol:
+        default: http
+  - url: https://api.bootstrap.example.com/api/v1
+    description: Production server
+    variables:
+      protocol:
+        default: https
+
+tags:
+  - name: Health
+    description: Service health and status
+  - name: Projects
+    description: Project creation, management, and approval gates
+  - name: Templates
+    description: Project template discovery and details
+  - name: WebSocket
+    description: Real-time progress and status updates
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns API health status and version information
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                    example: healthy
+                  version:
+                    type: string
+                    example: 1.0.0
+
+  /projects:
+    post:
+      tags: [Projects]
+      summary: Create a new project
+      description: |
+        Initiates project creation in either Discovery or Direct mode.
+
+        **Discovery Mode**: Provide `ProjectOverviewCreate` with high-level project description.
+        The system will generate specifications and request approval.
+
+        **Direct Mode**: Provide `ProjectSpecCreate` with exact technology stack specification.
+        The system proceeds directly to execution phase.
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ProjectOverviewCreate'
+                - $ref: '#/components/schemas/ProjectSpecCreate'
+            examples:
+              discoveryMode:
+                summary: Discovery Mode - High-level Overview
+                value:
+                  project_name: task-manager
+                  project_overview: "A collaborative task management application for small teams to organize, track, and complete work together. Support for real-time updates, task dependencies, and team collaboration."
+                  target_users: "Small to medium teams, project managers, developers"
+                  key_features: "Real-time collaboration, task dependencies, team messaging, progress tracking"
+                  project_type_hint: web-app
+              directMode:
+                summary: Direct Mode - Full Specification
+                value:
+                  project_name: task-api
+                  project_path: "/home/user/projects/"
+                  project_type: api
+                  language_stack: python
+                  framework: fastapi
+                  include_repo: true
+                  include_ci: true
+                  include_jira: false
+                  ci_provider: github-actions
+                  vcs_provider: github
+      responses:
+        '201':
+          description: Project creation initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '400':
+          description: Invalid project specification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error in request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+    get:
+      tags: [Projects]
+      summary: List all projects
+      description: Retrieve a paginated list of projects with optional status filtering
+      operationId: listProjects
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, input_received, designing, awaiting_approval, executing, completed, failed, cancelled]
+          description: Filter projects by status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Maximum number of projects to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of projects to skip
+      responses:
+        '200':
+          description: List of projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectListResponse'
+
+  /projects/validate:
+    post:
+      tags: [Projects]
+      summary: Validate project specification
+      description: |
+        Validates a project specification without creating any resources.
+        Checks for configuration issues, compatibility, and missing dependencies.
+      operationId: validateProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectSpecCreate'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '422':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /projects/{project_id}:
+    get:
+      tags: [Projects]
+      summary: Get project details
+      description: Retrieve detailed information about a project including artifacts, progress, and configuration
+      operationId: getProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier
+      responses:
+        '200':
+          description: Project details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetailResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Projects]
+      summary: Cancel project creation
+      description: |
+        Cancels a running project. Can only cancel projects that are not yet completed.
+        Cancels scheduled background tasks and marks the project as CANCELLED.
+      operationId: cancelProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier
+      responses:
+        '204':
+          description: Project cancelled successfully
+        '400':
+          description: Cannot cancel project in current state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /projects/{project_id}/progress:
+    get:
+      tags: [Projects]
+      summary: Get workflow progress
+      description: |
+        Retrieve current workflow progress for a project including current phase,
+        activated domain experts, and artifact status.
+      operationId: getProgress
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier
+      responses:
+        '200':
+          description: Progress information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowProgress'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /projects/{project_id}/approve:
+    post:
+      tags: [Projects]
+      summary: Approve current phase
+      description: |
+        Approves the current workflow phase and resumes execution.
+        Only available when project status is AWAITING_APPROVAL.
+        Optional feedback and modifications can be provided.
+      operationId: approvePhase
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: Phase approved and workflow resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '400':
+          description: Project not awaiting approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /projects/{project_id}/reject:
+    post:
+      tags: [Projects]
+      summary: Reject current phase
+      description: |
+        Rejects the current workflow phase with feedback.
+        Project returns to DESIGNING state for modifications.
+        Only available when project status is AWAITING_APPROVAL.
+      operationId: rejectPhase
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectionRequest'
+      responses:
+        '200':
+          description: Phase rejected, project returned to designing state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '400':
+          description: Project not awaiting approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /templates:
+    get:
+      tags: [Templates]
+      summary: List available templates
+      description: |
+        Retrieve available project templates.
+        Can be filtered by project type and language stack.
+      operationId: listTemplates
+      parameters:
+        - name: project_type
+          in: query
+          schema:
+            type: string
+            enum: [web-app, api, library, cli, monorepo, ml-project, ai-app, full-platform]
+          description: Filter by project type
+        - name: language_stack
+          in: query
+          schema:
+            type: string
+            enum: [python, node, java, go, rust, dotnet, multi]
+          description: Filter by language stack
+      responses:
+        '200':
+          description: List of available templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      type: object
+
+  /templates/{template_id}:
+    get:
+      tags: [Templates]
+      summary: Get template details
+      description: Retrieve detailed information about a specific template
+      operationId: getTemplate
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Template identifier
+      responses:
+        '200':
+          description: Template details
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /ws/projects/{project_id}:
+    get:
+      tags: [WebSocket]
+      summary: WebSocket connection for real-time updates
+      description: |
+        Establishes WebSocket connection for receiving real-time project updates.
+
+        ## Message Types
+
+        ### Connected
+        Sent when client successfully connects:
+        ```json
+        {
+          "type": "connected",
+          "timestamp": "2024-01-14T10:30:00Z",
+          "project_id": "proj_123",
+          "message": "Connected to project updates"
+        }
+        ```
+
+        ### Phase Started
+        Sent when a workflow phase begins:
+        ```json
+        {
+          "type": "phase_started",
+          "timestamp": "2024-01-14T10:30:05Z",
+          "project_id": "proj_123",
+          "phase": "designing",
+          "phase_display_name": "Designing"
+        }
+        ```
+
+        ### Phase Completed
+        Sent when a workflow phase finishes:
+        ```json
+        {
+          "type": "phase_completed",
+          "timestamp": "2024-01-14T10:35:00Z",
+          "project_id": "proj_123",
+          "phase": "designing",
+          "status": "completed",
+          "duration_ms": 295000
+        }
+        ```
+
+        ### Agent Started
+        Sent when an agent begins execution:
+        ```json
+        {
+          "type": "agent_started",
+          "timestamp": "2024-01-14T10:30:10Z",
+          "project_id": "proj_123",
+          "agent_id": "agent_po",
+          "agent_name": "Product Owner",
+          "phase": "designing"
+        }
+        ```
+
+        ### Agent Progress
+        Sent periodically during agent execution:
+        ```json
+        {
+          "type": "agent_progress",
+          "timestamp": "2024-01-14T10:31:00Z",
+          "project_id": "proj_123",
+          "agent_id": "agent_po",
+          "agent_name": "Product Owner",
+          "progress_percent": 45,
+          "message": "Generating user stories"
+        }
+        ```
+
+        ### Agent Completed
+        Sent when an agent finishes execution:
+        ```json
+        {
+          "type": "agent_completed",
+          "timestamp": "2024-01-14T10:32:00Z",
+          "project_id": "proj_123",
+          "agent_id": "agent_po",
+          "agent_name": "Product Owner",
+          "status": "completed",
+          "duration_ms": 120000,
+          "output_preview": "Generated product design with 5 epics and 23 user stories"
+        }
+        ```
+
+        ### Approval Required
+        Sent when workflow pauses for user approval:
+        ```json
+        {
+          "type": "approval_required",
+          "timestamp": "2024-01-14T10:33:00Z",
+          "project_id": "proj_123",
+          "phase": "designing",
+          "artifact_type": "product_design",
+          "artifact_preview": {
+            "vision": "Collaborative task management...",
+            "epics": 5,
+            "user_stories": 23
+          }
+        }
+        ```
+
+        ### Workflow Completed
+        Sent when entire workflow finishes:
+        ```json
+        {
+          "type": "workflow_completed",
+          "timestamp": "2024-01-14T11:00:00Z",
+          "project_id": "proj_123",
+          "status": "completed",
+          "duration_ms": 1800000,
+          "summary": {
+            "phases_completed": 4,
+            "agents_executed": 12,
+            "artifacts_generated": 8
+          }
+        }
+        ```
+
+        ### Error
+        Sent when an error occurs:
+        ```json
+        {
+          "type": "error",
+          "timestamp": "2024-01-14T10:34:00Z",
+          "project_id": "proj_123",
+          "error_code": "AGENT_FAILURE",
+          "error_message": "Agent failed with exception",
+          "phase": "designing",
+          "agent_id": "agent_architect"
+        }
+        ```
+
+        ### Log
+        Sent for informational logging:
+        ```json
+        {
+          "type": "log",
+          "timestamp": "2024-01-14T10:30:15Z",
+          "project_id": "proj_123",
+          "level": "info",
+          "agent_id": "agent_po",
+          "message": "Analyzing project overview"
+        }
+        ```
+      operationId: projectWebSocket
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique project identifier
+      responses:
+        '101':
+          description: Switching to WebSocket protocol
+        '404':
+          description: Project not found
+
+components:
+  schemas:
+    # ===== Input Schemas =====
+
+    ProjectOverviewCreate:
+      type: object
+      title: Project Overview (Discovery Mode)
+      description: High-level project overview for Discovery mode - system generates specifications
+      required:
+        - project_name
+        - project_overview
+      properties:
+        project_name:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$'
+          example: task-manager
+          description: Project name (alphanumeric, hyphens, underscores)
+        project_overview:
+          type: string
+          minLength: 100
+          maxLength: 5000
+          example: "A collaborative task management application for small teams to organize and track work together"
+          description: High-level description of the project
+        target_users:
+          type: string
+          maxLength: 1000
+          example: "Small to medium teams, project managers, developers"
+          description: Description of target users
+        key_features:
+          type: string
+          maxLength: 2000
+          example: "Real-time collaboration, task dependencies, team messaging"
+          description: Key features to implement
+        constraints:
+          type: string
+          maxLength: 1000
+          example: "Must be deployable on AWS, support 1000+ concurrent users"
+          description: Project constraints and requirements
+        similar_products:
+          type: string
+          maxLength: 500
+          example: "Jira, Asana, Monday.com"
+          description: Similar products for reference
+        project_type_hint:
+          type: string
+          enum: [web-app, api, library, cli, monorepo, ml-project, ai-app, full-platform]
+          example: web-app
+          description: Optional hint about project type
+
+    ProjectSpecCreate:
+      type: object
+      title: Project Specification (Direct Mode)
+      description: Complete project specification for Direct mode - system proceeds directly to execution
+      required:
+        - project_name
+        - project_path
+        - project_type
+        - language_stack
+      properties:
+        project_name:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: '^[a-z][a-z0-9-]*$'
+          example: task-api
+          description: Project name (lowercase alphanumeric and hyphens)
+        project_path:
+          type: string
+          example: /home/user/projects/
+          description: Local filesystem path for project
+        project_type:
+          type: string
+          enum: [web-app, api, library, cli, monorepo, ml-project, ai-app, full-platform]
+          example: api
+          description: Type of project to create
+        language_stack:
+          type: string
+          enum: [python, node, java, go, rust, dotnet, multi]
+          example: python
+          description: Primary programming language
+        framework:
+          type: string
+          example: fastapi
+          description: Framework to use (optional)
+        include_repo:
+          type: boolean
+          default: true
+          description: Initialize Git repository
+        include_ci:
+          type: boolean
+          default: true
+          description: Generate CI/CD pipeline
+        include_jira:
+          type: boolean
+          default: false
+          description: Create Jira project
+        ci_provider:
+          type: string
+          enum: [github-actions, gitlab-ci, azure-pipelines]
+          default: github-actions
+          description: CI/CD provider to use
+        vcs_provider:
+          type: string
+          enum: [github, gitlab, bitbucket]
+          default: github
+          description: Version control service provider
+        vcs_config:
+          $ref: '#/components/schemas/VCSConfig'
+        jira_config:
+          $ref: '#/components/schemas/JiraConfig'
+
+    VCSConfig:
+      type: object
+      title: Version Control Configuration
+      description: Git and remote repository configuration
+      properties:
+        visibility:
+          type: string
+          enum: [public, private]
+          default: private
+          description: Repository visibility
+        create_remote:
+          type: boolean
+          default: true
+          description: Create remote repository
+        default_branch:
+          type: string
+          default: main
+          example: main
+          description: Default branch name
+
+    JiraConfig:
+      type: object
+      title: Jira Configuration
+      description: Jira project creation configuration
+      required:
+        - key_prefix
+      properties:
+        key_prefix:
+          type: string
+          minLength: 2
+          maxLength: 10
+          pattern: '^[A-Z]+$'
+          example: PROJ
+          description: Jira project key prefix (uppercase letters only)
+        project_type:
+          type: string
+          enum: [scrum, kanban, basic]
+          default: scrum
+          description: Jira project type
+
+    ApprovalRequest:
+      type: object
+      title: Phase Approval
+      description: Request to approve a workflow phase
+      properties:
+        feedback:
+          type: string
+          maxLength: 2000
+          example: "Looks good, proceed with execution"
+          description: Optional feedback on the artifacts
+        modifications:
+          type: object
+          description: Optional modifications to apply before proceeding
+
+    RejectionRequest:
+      type: object
+      title: Phase Rejection
+      description: Request to reject a workflow phase with feedback
+      required:
+        - feedback
+      properties:
+        feedback:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          example: "The architecture doesn't align with our security requirements. Please revise."
+          description: Feedback on why phase was rejected
+        specific_issues:
+          type: array
+          items:
+            type: string
+          description: List of specific issues to address
+
+    # ===== Response Schemas =====
+
+    ProjectResponse:
+      type: object
+      title: Project Response
+      description: Basic project information and current state
+      properties:
+        id:
+          type: string
+          example: proj_abc123xyz
+          description: Unique project identifier
+        status:
+          type: string
+          enum: [pending, input_received, designing, awaiting_approval, executing, completed, failed, cancelled]
+          example: designing
+          description: Current project status
+        mode:
+          type: string
+          enum: [discovery, direct]
+          example: discovery
+          description: Project creation mode
+        current_phase:
+          type: string
+          example: designing
+          description: Current workflow phase
+        project_name:
+          type: string
+          example: task-manager
+          description: Project name
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-14T10:30:00Z"
+          description: Project creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-14T10:35:00Z"
+          description: Last update timestamp
+        completed_at:
+          type: string
+          format: date-time
+          example: "2024-01-14T11:00:00Z"
+          description: Project completion timestamp (if completed)
+
+    ProjectDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ProjectResponse'
+        - type: object
+          properties:
+            project_overview:
+              type: object
+              description: Original project overview (Discovery mode)
+            project_spec:
+              type: object
+              description: Project specification
+            product_design:
+              $ref: '#/components/schemas/ProductDesign'
+            architecture_design:
+              $ref: '#/components/schemas/ArchitectureDesign'
+            execution_progress:
+              type: object
+              description: Execution progress details
+
+    ProjectListResponse:
+      type: object
+      title: Project List
+      description: Paginated list of projects
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectResponse'
+          description: List of projects
+        total:
+          type: integer
+          example: 42
+          description: Total number of projects
+        limit:
+          type: integer
+          example: 20
+          description: Pagination limit
+        offset:
+          type: integer
+          example: 0
+          description: Pagination offset
+
+    ProductDesign:
+      type: object
+      title: Product Design
+      description: Product design output from PO Agent
+      properties:
+        vision:
+          type: string
+          description: Project vision statement
+        goals:
+          type: array
+          items:
+            type: string
+          description: Strategic goals
+        personas:
+          type: array
+          items:
+            type: object
+          description: Target user personas
+        epics:
+          type: array
+          items:
+            type: object
+          description: Product epics
+        mvp_scope:
+          type: object
+          description: Minimum Viable Product scope and features
+        risks:
+          type: array
+          items:
+            type: object
+          description: Identified risks and mitigations
+        success_metrics:
+          type: array
+          items:
+            type: object
+          description: Success metrics and KPIs
+
+    ArchitectureDesign:
+      type: object
+      title: Architecture Design
+      description: System architecture output from Architect Agents
+      properties:
+        tech_stack:
+          type: object
+          description: Technology stack recommendations
+          properties:
+            backend:
+              type: string
+            frontend:
+              type: string
+            database:
+              type: string
+            infrastructure:
+              type: string
+        system_components:
+          type: array
+          items:
+            type: object
+          description: System components and their relationships
+        data_model:
+          type: object
+          description: Data model and schema design
+        api_design:
+          type: object
+          description: API design specifications
+        security:
+          type: object
+          description: Security architecture and recommendations
+        infrastructure:
+          type: object
+          description: Infrastructure and deployment architecture
+        domain_considerations:
+          type: array
+          items:
+            type: object
+          description: Domain-specific considerations (compliance, best practices)
+
+    WorkflowProgress:
+      type: object
+      title: Workflow Progress
+      description: Current workflow progress for a project
+      properties:
+        project_id:
+          type: string
+          description: Project identifier
+        status:
+          type: string
+          enum: [pending, input_received, designing, awaiting_approval, executing, completed, failed, cancelled]
+          description: Project status
+        mode:
+          type: string
+          enum: [discovery, direct]
+          description: Workflow mode
+        current_phase:
+          type: string
+          description: Current phase name
+        activated_experts:
+          type: array
+          items:
+            type: string
+          description: List of activated domain experts
+        has_product_design:
+          type: boolean
+          description: Whether product design has been generated
+        has_architecture:
+          type: boolean
+          description: Whether architecture design has been generated
+
+    ValidationResult:
+      type: object
+      title: Validation Result
+      description: Specification validation result
+      properties:
+        valid:
+          type: boolean
+          example: true
+          description: Whether specification is valid
+        errors:
+          type: array
+          items:
+            type: string
+          description: List of validation errors
+        warnings:
+          type: array
+          items:
+            type: string
+          description: List of validation warnings
+
+    # ===== Error Schemas =====
+
+    ErrorResponse:
+      type: object
+      title: Error Response
+      description: Standard error response
+      properties:
+        error:
+          type: string
+          example: not_found
+          description: Error code
+        message:
+          type: string
+          example: "Project proj_123 not found"
+          description: Error message
+        request_id:
+          type: string
+          example: req_abc123
+          description: Request identifier for debugging
+
+    ValidationErrorResponse:
+      type: object
+      title: Validation Error Response
+      description: Validation error response with field details
+      properties:
+        error:
+          type: string
+          default: validation_error
+          example: validation_error
+          description: Error code
+        message:
+          type: string
+          example: "Validation failed"
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: project_name
+              message:
+                type: string
+                example: "Project name must start with a letter"
+              code:
+                type: string
+                example: pattern_mismatch
+          description: List of field validation errors
+
+  # ===== Security Schemes =====
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer token authentication (optional in current implementation).
+
+        Future: Include in Authorization header:
+        ```
+        Authorization: Bearer <your-jwt-token>
+        ```
+
+security:
+  - bearerAuth: []
+
+# ===== Examples and Notes =====
+
+x-logo:
+  url: https://example.com/logo.png
+  altText: Project Bootstrap logo
+
+x-internal:
+  contact-email: dev-team@bootstrap.local
+  slack-channel: "#project-bootstrap-api"

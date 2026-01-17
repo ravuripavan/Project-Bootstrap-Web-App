@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+
+    participant UI as Web App UI
+    participant BE as Web Backend
+    participant ORCH as OrchestrationAgent
+    participant PSC as ProjectSpecCollectorAgent
+    participant VAL as SpecValidatorAgent
+    participant TMP as TemplateSelectorAgent
+    participant PLAN as PlanBuilderAgent
+    participant FS as FilesystemScaffolderAgent
+    participant GIT as GitRepoProvisionerAgent
+    participant WF as WorkflowGeneratorAgent
+    participant JIRA as JiraSpaceProvisionerAgent
+    participant SUM as SummaryReporterAgent
+
+    UI->>BE: Submit project creation request
+    BE->>ORCH: Send OrchestrationSpec
+
+    ORCH->>PSC: Normalize spec
+    PSC-->>ORCH: ProjectSpec
+
+    ORCH->>VAL: Validate ProjectSpec
+    VAL-->>ORCH: ValidationResult
+
+    ORCH->>TMP: Select template bundle
+    TMP-->>ORCH: TemplateBundle
+
+    ORCH->>PLAN: Build execution plan
+    PLAN-->>ORCH: Plan
+
+    ORCH->>FS: Execute filesystem tasks
+    FS-->>ORCH: FilesystemResult
+
+    ORCH->>GIT: Execute git tasks
+    GIT-->>ORCH: GitResult
+
+    ORCH->>WF: Generate CI/CD workflows
+    WF-->>ORCH: WorkflowResult
+
+    ORCH->>JIRA: Create Jira project
+    JIRA-->>ORCH: JiraResult
+
+    ORCH->>SUM: Summarize results
+    SUM-->>ORCH: Summary
+
+    ORCH-->>BE: Final orchestration result
+    BE-->>UI: Display summary
