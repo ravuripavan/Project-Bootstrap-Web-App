@@ -91,3 +91,6 @@ playwright-report/
 
 # Misc
 nul
+
+# Claude local settings
+.claude/settings.local.json
