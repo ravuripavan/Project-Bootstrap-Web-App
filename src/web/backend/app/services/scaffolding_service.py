@@ -30,6 +30,96 @@ class ScaffoldingService:
         self.base_output_dir.mkdir(parents=True, exist_ok=True)
         self.templates_dir = Path(templates_dir) if templates_dir else TEMPLATES_DIR
 
+    def validate_project_agents(self, project_path: str) -> Dict[str, Any]:
+        """
+        Public method to validate agents in an existing project.
+        Can be called independently of scaffolding.
+
+        Args:
+            project_path: Path to the project directory
+
+        Returns:
+            Validation results with agent status, errors, and warnings
+        """
+        project_dir = Path(project_path)
+
+        if not project_dir.exists():
+            return {
+                "valid": False,
+                "error": f"Project path does not exist: {project_path}",
+                "agents": [],
+            }
+
+        validation_results = self._validate_agents(project_dir)
+
+        # Build list of available agents for CLI
+        available_agents = []
+        for agent in validation_results["agents"]:
+            if agent["valid"]:
+                available_agents.append({
+                    "name": agent["name"],
+                    "command": f"/agent:{agent['name']}",
+                    "file": agent["file"],
+                    "has_frontmatter": agent["has_frontmatter"],
+                })
+
+        return {
+            "project_path": str(project_dir),
+            "valid": validation_results["valid"],
+            "summary": {
+                "total_agents": validation_results["total_agents"],
+                "valid_agents": validation_results["valid_agents"],
+                "agents_with_errors": validation_results["agents_with_errors"],
+                "agents_with_warnings": validation_results["agents_with_warnings"],
+            },
+            "available_agents": available_agents,
+            "errors": validation_results["errors"],
+            "warnings": validation_results["warnings"],
+            "agent_details": validation_results["agents"],
+        }
+
+    def fix_project_agents(self, project_path: str) -> Dict[str, Any]:
+        """
+        Public method to fix common agent errors in an existing project.
+
+        Args:
+            project_path: Path to the project directory
+
+        Returns:
+            Fix results and updated validation status
+        """
+        project_dir = Path(project_path)
+
+        if not project_dir.exists():
+            return {
+                "success": False,
+                "error": f"Project path does not exist: {project_path}",
+            }
+
+        # First validate
+        validation_results = self._validate_agents(project_dir)
+
+        if validation_results["valid"]:
+            return {
+                "success": True,
+                "message": "All agents are already valid, no fixes needed",
+                "validation": self.validate_project_agents(project_path),
+            }
+
+        # Apply fixes
+        fix_results = self._fix_agent_errors(project_dir, validation_results)
+
+        # Re-validate
+        new_validation = self.validate_project_agents(project_path)
+
+        return {
+            "success": new_validation["valid"],
+            "fixes_applied": fix_results["fixed"],
+            "fixes_failed": fix_results["failed"],
+            "fix_details": fix_results["details"],
+            "validation": new_validation,
+        }
+
     async def scaffold_project(
         self,
         project_name: str,
@@ -95,6 +185,29 @@ class ScaffoldingService:
         # 9. Initialize git with branches (main, dev, test) and checkout to dev
         git_result = self._init_git(project_dir)
 
+        # 10. Validate all agents and auto-fix errors
+        logger.info("Validating agent files", project_name=project_name)
+        validation_results = self._validate_agents(project_dir)
+
+        # Auto-fix any errors found
+        fix_results = None
+        if not validation_results["valid"]:
+            logger.warning(
+                "Agent validation found errors, attempting auto-fix",
+                errors=validation_results["agents_with_errors"]
+            )
+            fix_results = self._fix_agent_errors(project_dir, validation_results)
+
+            # Re-validate after fixes
+            validation_results = self._validate_agents(project_dir)
+            if validation_results["valid"]:
+                logger.info("All agent errors auto-fixed successfully")
+            else:
+                logger.error(
+                    "Some agent errors could not be auto-fixed",
+                    remaining_errors=validation_results["agents_with_errors"]
+                )
+
         result = {
             "project_path": str(project_dir),
             "created_directories": len(created_dirs),
@@ -102,16 +215,29 @@ class ScaffoldingService:
             "files": created_files,
             "directories": created_dirs,
             "git": git_result,
-            "claude_code_ready": True,
+            "claude_code_ready": validation_results["valid"],
             "agents_count": len([f for f in created_files if ".claude/agents/" in f]),
+            "agent_validation": {
+                "valid": validation_results["valid"],
+                "total": validation_results["total_agents"],
+                "valid_count": validation_results["valid_agents"],
+                "errors_count": validation_results["agents_with_errors"],
+                "warnings_count": validation_results["agents_with_warnings"],
+                "errors": validation_results["errors"][:10],  # Limit to first 10
+                "warnings": validation_results["warnings"][:10],  # Limit to first 10
+            },
         }
+
+        if fix_results:
+            result["agent_fixes"] = fix_results
 
         logger.info(
             "Claude Code CLI project scaffolding complete",
             project_name=project_name,
             path=str(project_dir),
             files=len(created_files),
-            agents=result["agents_count"]
+            agents=result["agents_count"],
+            agents_valid=validation_results["valid"]
         )
 
         return result
@@ -1764,3 +1890,186 @@ See `CLAUDE.md` for full development workflow.
         """Write content to file."""
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+
+    def _validate_agents(self, project_dir: Path) -> Dict[str, Any]:
+        """
+        Validate all agent files in .claude/agents/ directory.
+        Checks for:
+        1. File exists and is readable
+        2. No literal \\n strings (should be actual newlines)
+        3. Valid frontmatter structure (--- delimited)
+        4. Required fields in frontmatter (name, description)
+        5. Non-empty content after frontmatter
+
+        Returns validation results with errors and warnings.
+        """
+        agents_dir = project_dir / ".claude" / "agents"
+        results = {
+            "valid": True,
+            "total_agents": 0,
+            "valid_agents": 0,
+            "agents_with_errors": 0,
+            "agents_with_warnings": 0,
+            "agents": [],
+            "errors": [],
+            "warnings": [],
+        }
+
+        if not agents_dir.exists():
+            results["valid"] = False
+            results["errors"].append("Agents directory does not exist: .claude/agents/")
+            return results
+
+        agent_files = list(agents_dir.glob("*.md"))
+        results["total_agents"] = len(agent_files)
+
+        for agent_file in agent_files:
+            agent_result = self._validate_single_agent(agent_file)
+            results["agents"].append(agent_result)
+
+            if agent_result["errors"]:
+                results["agents_with_errors"] += 1
+                results["errors"].extend(
+                    [f"{agent_file.name}: {e}" for e in agent_result["errors"]]
+                )
+            elif agent_result["warnings"]:
+                results["agents_with_warnings"] += 1
+                results["warnings"].extend(
+                    [f"{agent_file.name}: {w}" for w in agent_result["warnings"]]
+                )
+            else:
+                results["valid_agents"] += 1
+
+        results["valid"] = results["agents_with_errors"] == 0
+        return results
+
+    def _validate_single_agent(self, agent_file: Path) -> Dict[str, Any]:
+        """Validate a single agent file."""
+        result = {
+            "name": agent_file.stem,
+            "file": agent_file.name,
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "has_frontmatter": False,
+            "has_content": False,
+            "frontmatter_fields": [],
+        }
+
+        try:
+            content = agent_file.read_text(encoding="utf-8")
+        except Exception as e:
+            result["valid"] = False
+            result["errors"].append(f"Cannot read file: {str(e)}")
+            return result
+
+        # Check for literal \n strings (common template error)
+        if "\\n" in content:
+            # Count occurrences
+            count = content.count("\\n")
+            result["errors"].append(
+                f"Contains {count} literal '\\\\n' strings that should be actual newlines"
+            )
+            result["valid"] = False
+
+        # Check for other escaped characters that shouldn't be there
+        if "\\t" in content:
+            result["warnings"].append("Contains literal '\\\\t' strings")
+
+        # Check for frontmatter (--- delimited YAML)
+        lines = content.split("\n")
+        if lines and lines[0].strip() == "---":
+            # Find closing ---
+            closing_idx = -1
+            for i, line in enumerate(lines[1:], 1):
+                if line.strip() == "---":
+                    closing_idx = i
+                    break
+
+            if closing_idx > 0:
+                result["has_frontmatter"] = True
+                frontmatter_lines = lines[1:closing_idx]
+
+                # Extract fields from frontmatter
+                for line in frontmatter_lines:
+                    if ":" in line:
+                        field = line.split(":")[0].strip()
+                        result["frontmatter_fields"].append(field)
+
+                # Check required fields
+                required_fields = ["name", "description"]
+                for field in required_fields:
+                    if field not in result["frontmatter_fields"]:
+                        result["warnings"].append(f"Missing recommended frontmatter field: {field}")
+
+                # Check for content after frontmatter
+                content_after = "\n".join(lines[closing_idx + 1:]).strip()
+                result["has_content"] = len(content_after) > 0
+
+                if not result["has_content"]:
+                    result["warnings"].append("No content after frontmatter")
+            else:
+                result["warnings"].append("Frontmatter not properly closed (missing closing ---)")
+        else:
+            # No frontmatter - check if there's still useful content
+            if content.strip():
+                result["has_content"] = True
+                result["warnings"].append("No frontmatter found (agent may not be properly recognized by CLI)")
+            else:
+                result["errors"].append("File is empty")
+                result["valid"] = False
+
+        # Check minimum content length
+        if len(content.strip()) < 50:
+            result["warnings"].append("Agent file has very little content")
+
+        # Check for common CLI agent requirements
+        # Agent should have some instruction text
+        if result["has_content"]:
+            lower_content = content.lower()
+            if "you are" not in lower_content and "your role" not in lower_content:
+                result["warnings"].append("Agent may be missing role definition (no 'You are' or 'Your role' found)")
+
+        return result
+
+    def _fix_agent_errors(self, project_dir: Path, validation_results: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Attempt to automatically fix common agent errors.
+        Returns fix results.
+        """
+        agents_dir = project_dir / ".claude" / "agents"
+        fix_results = {
+            "fixed": 0,
+            "failed": 0,
+            "details": [],
+        }
+
+        for agent in validation_results["agents"]:
+            if not agent["valid"]:
+                agent_file = agents_dir / agent["file"]
+                try:
+                    content = agent_file.read_text(encoding="utf-8")
+                    original_content = content
+
+                    # Fix literal \n strings
+                    if "\\n" in content:
+                        content = content.replace("\\n", "\n")
+
+                    # Fix literal \t strings
+                    if "\\t" in content:
+                        content = content.replace("\\t", "\t")
+
+                    # Only write if changed
+                    if content != original_content:
+                        agent_file.write_text(content, encoding="utf-8")
+                        fix_results["fixed"] += 1
+                        fix_results["details"].append(f"Fixed: {agent['file']}")
+                    else:
+                        fix_results["failed"] += 1
+                        fix_results["details"].append(f"No auto-fix available: {agent['file']}")
+
+                except Exception as e:
+                    fix_results["failed"] += 1
+                    fix_results["details"].append(f"Fix failed for {agent['file']}: {str(e)}")
+
+        return fix_results

@@ -834,3 +834,84 @@ async def scan_path_for_projects(request: CustomPathRequest):
 
     projects = scan_directory_for_projects(Path(path))
     return {"projects": projects, "path": path}
+
+
+# Agent Validation Endpoints
+
+class ValidateAgentsRequest(BaseModel):
+    project_path: str
+
+
+@router.post("/validate-agents")
+async def validate_project_agents(request: ValidateAgentsRequest):
+    """
+    Validate all agents in a project's .claude/agents/ directory.
+
+    Checks for:
+    - File readability
+    - No literal \\n strings (common template error)
+    - Valid frontmatter structure
+    - Required frontmatter fields
+    - Non-empty content
+
+    Returns list of available agents that can be used with CLI.
+    """
+    path = request.project_path.strip()
+
+    if not Path(path).exists():
+        raise HTTPException(status_code=400, detail=f"Path does not exist: {path}")
+
+    if not Path(path).is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+
+    service = ScaffoldingService()
+    result = service.validate_project_agents(path)
+    return result
+
+
+@router.post("/fix-agents")
+async def fix_project_agents(request: ValidateAgentsRequest):
+    """
+    Validate and auto-fix common agent errors in a project.
+
+    Automatically fixes:
+    - Literal \\n strings converted to actual newlines
+    - Literal \\t strings converted to actual tabs
+
+    Returns fix results and updated validation status.
+    """
+    path = request.project_path.strip()
+
+    if not Path(path).exists():
+        raise HTTPException(status_code=400, detail=f"Path does not exist: {path}")
+
+    if not Path(path).is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+
+    service = ScaffoldingService()
+    result = service.fix_project_agents(path)
+    return result
+
+
+@router.get("/validate-agents/{project_name}")
+async def validate_scaffolded_project_agents(project_name: str):
+    """
+    Validate agents for a scaffolded project by name.
+
+    Looks in default and custom project paths for the project.
+    """
+    # Search in default path first
+    default_path = Path.home() / "bootstrapped-projects" / project_name
+    if default_path.exists():
+        service = ScaffoldingService()
+        return service.validate_project_agents(str(default_path))
+
+    # Search in custom paths
+    custom_paths = load_custom_paths()
+    for custom_path in custom_paths:
+        project_path = Path(custom_path) / project_name
+        if project_path.exists():
+            service = ScaffoldingService()
+            return service.validate_project_agents(str(project_path))
+
+    raise HTTPException(status_code=404, detail=f"Project not found: {project_name}")
