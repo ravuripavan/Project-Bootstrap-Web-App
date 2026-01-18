@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Use full backend URL for development
 const API_BASE_URL = import.meta.env.DEV
-  ? 'http://localhost:8002/api/v1'
+  ? 'http://localhost:8000/api/v1'
   : '/api/v1';
 
 const api = axios.create({
@@ -151,6 +151,55 @@ export interface AgentInfo {
   content?: string;
 }
 
+// Project Status Types
+export interface WorkflowPhase {
+  phase: string;
+  step: string;
+  agent: string;
+  status: string;
+}
+
+export interface DevelopmentStream {
+  stream: string;
+  module: string;
+  agent: string;
+  status: string;
+  progress: string;
+}
+
+export interface ActiveAgent {
+  agent: string;
+  role: string;
+  module: string;
+  status: string;
+}
+
+export interface Blocker {
+  issue: string;
+  impact: string;
+  resolution: string;
+}
+
+export interface ProjectStatus {
+  project_name: string;
+  project_path: string;
+  current_phase: string;
+  current_wave?: string;
+  status: string;
+  last_updated?: string;
+  workflow_phases: WorkflowPhase[];
+  development_streams: DevelopmentStream[];
+  active_agents: ActiveAgent[];
+  blockers: Blocker[];
+  raw_content?: string;
+}
+
+export interface ScaffoldedProject {
+  name: string;
+  path: string;
+  has_status: boolean;
+}
+
 export const terminalApi = {
   generateCommand: async (data: TerminalCommandRequest) => {
     const response = await api.post<TerminalCommandResponse>('/terminal/command', data);
@@ -175,6 +224,16 @@ export const terminalApi = {
   getAgentInfo: async (agentId: string, projectPath?: string) => {
     const params = projectPath ? { project_path: projectPath } : {};
     const response = await api.get<AgentInfo>(`/terminal/agent/${agentId}`, { params });
+    return response.data;
+  },
+
+  getProjectStatus: async (projectName: string) => {
+    const response = await api.get<ProjectStatus>(`/terminal/project-status/${projectName}`);
+    return response.data;
+  },
+
+  listScaffoldedProjects: async () => {
+    const response = await api.get<{ projects: ScaffoldedProject[] }>('/terminal/scaffolded-projects');
     return response.data;
   },
 };

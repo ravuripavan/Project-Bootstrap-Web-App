@@ -1,9 +1,14 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Rocket, Zap, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Plus, Rocket, Zap, Clock, CheckCircle, AlertCircle,
+  Bot, Users, Code, Layers, Shield, FileText, TestTube, Settings,
+  ChevronRight, Activity, ChevronDown, ChevronUp
+} from 'lucide-react';
 import { Card, Badge, Progress, Spinner } from '@/components/ui';
-import { projectsApi, Project } from '@/lib/api';
+import { projectsApi, terminalApi, Project, Agent, ProjectStatus, ScaffoldedProject } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import ScaffoldWorkflow from '@/components/ScaffoldWorkflow';
 
@@ -15,11 +20,87 @@ const statusConfig: Record<string, { color: string; icon: typeof Clock; label: s
   failed: { color: 'error', icon: AlertCircle, label: 'Failed' },
 };
 
+const agentCategoryConfig: Record<string, { icon: typeof Bot; color: string; label: string }> = {
+  core: { icon: Layers, color: 'primary', label: 'Core Agents' },
+  architect: { icon: Settings, color: 'accent', label: 'Architect Agents' },
+  developer: { icon: Code, color: 'success', label: 'Developer Agents' },
+  support: { icon: Shield, color: 'warning', label: 'Support Agents' },
+};
+
+const phases = [
+  { id: 'input', name: 'Input' },
+  { id: 'product_design', name: 'Product Design' },
+  { id: 'architecture_design', name: 'Architecture' },
+  { id: 'code_generation', name: 'Code Generation' },
+  { id: 'quality', name: 'Quality & DevOps' },
+  { id: 'scaffolding', name: 'Scaffolding' },
+  { id: 'summary', name: 'Summary' },
+];
+
 export default function Dashboard() {
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedScaffoldedProject, setSelectedScaffoldedProject] = useState<string | null>(null);
+  const [showProjectStatus, setShowProjectStatus] = useState(true);
+  const [showAgents, setShowAgents] = useState(false);
+  const [showRecentProjects, setShowRecentProjects] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: () => projectsApi.list(),
+    refetchInterval: 5000, // Refresh every 5 seconds for live updates
   });
+
+  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => terminalApi.listAgents(),
+  });
+
+  // Fetch scaffolded projects
+  const { data: scaffoldedData } = useQuery({
+    queryKey: ['scaffolded-projects'],
+    queryFn: () => terminalApi.listScaffoldedProjects(),
+    refetchInterval: 10000,
+  });
+
+  // Fetch project status for selected scaffolded project
+  const { data: projectStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['project-status', selectedScaffoldedProject],
+    queryFn: () => terminalApi.getProjectStatus(selectedScaffoldedProject!),
+    enabled: !!selectedScaffoldedProject,
+    refetchInterval: 5000,
+  });
+
+  // Auto-select first scaffolded project with status
+  useEffect(() => {
+    if (scaffoldedData?.projects.length && !selectedScaffoldedProject) {
+      const withStatus = scaffoldedData.projects.find(p => p.has_status);
+      if (withStatus) {
+        setSelectedScaffoldedProject(withStatus.name);
+      }
+    }
+  }, [scaffoldedData?.projects, selectedScaffoldedProject]);
+
+  // Auto-select first project or active project when data loads
+  useEffect(() => {
+    if (data?.projects.length && !selectedProjectId) {
+      // Prefer active project, fallback to first
+      const activeProject = data.projects.find(
+        p => p.status === 'executing' || p.status === 'awaiting_approval'
+      );
+      setSelectedProjectId(activeProject?.id || data.projects[0]?.id || null);
+    }
+  }, [data?.projects, selectedProjectId]);
+
+  // Get selected project from list
+  const selectedProject = data?.projects.find(p => p.id === selectedProjectId);
+
+  // Group agents by category
+  const agentsByCategory = agentsData?.agents.reduce((acc, agent) => {
+    const category = agent.category || 'core';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(agent);
+    return acc;
+  }, {} as Record<string, Agent[]>) || {};
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -72,34 +153,310 @@ export default function Dashboard() {
         <ScaffoldWorkflow />
       </motion.div>
 
-      {/* Projects List */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Recent Projects</h2>
-          <Link to="/new">
-            <button className="flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors">
-              <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">New Project</span>
-            </button>
-          </Link>
-        </div>
+      {/* Scaffolded Project Status */}
+      {scaffoldedData?.projects.some(p => p.has_status) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="border-primary-500/30 bg-gradient-to-r from-primary-500/5 to-accent-500/5">
+            {/* Header with Dropdown */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowProjectStatus(!showProjectStatus)}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center ${showProjectStatus ? 'animate-pulse' : ''}`}>
+                  <Activity className="w-4 h-4 text-primary-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    Project Status
+                    {showProjectStatus ? (
+                      <ChevronUp className="w-4 h-4 text-dark-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-dark-500" />
+                    )}
+                  </h2>
+                  <p className="text-xs text-dark-400">Live development progress</p>
+                </div>
+              </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Spinner size="lg" />
-          </div>
-        ) : data?.projects.length === 0 ? (
-          <Card className="text-center py-12">
-            <p className="text-dark-400">No projects yet. Create your first one!</p>
+              {/* Scaffolded Project Dropdown */}
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                <select
+                  value={selectedScaffoldedProject || ''}
+                  onChange={(e) => setSelectedScaffoldedProject(e.target.value)}
+                  className="appearance-none bg-dark-700 border border-dark-600 rounded-lg px-3 py-1.5 pr-8 text-dark-100 text-xs focus:outline-none focus:border-primary-500 cursor-pointer min-w-[150px]"
+                >
+                  {scaffoldedData?.projects.filter(p => p.has_status).map((project) => (
+                    <option key={project.name} value={project.name}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-dark-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {showProjectStatus && (
+              <div className="mt-4">
+                {statusLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner />
+                  </div>
+                ) : projectStatus ? (
+                  <>
+                    {/* Status Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                      <div className="bg-dark-800/50 rounded-lg p-4">
+                        <p className="text-xs text-dark-500 uppercase mb-1">Current Phase</p>
+                        <p className="font-semibold text-primary-400">{projectStatus.current_phase}</p>
+                      </div>
+                      <div className="bg-dark-800/50 rounded-lg p-4">
+                        <p className="text-xs text-dark-500 uppercase mb-1">Status</p>
+                        <Badge variant={projectStatus.status.includes('PROGRESS') ? 'warning' : 'info'}>
+                          {projectStatus.status}
+                        </Badge>
+                      </div>
+                      <div className="bg-dark-800/50 rounded-lg p-4">
+                        <p className="text-xs text-dark-500 uppercase mb-1">Current Wave</p>
+                        <p className="font-medium text-dark-200 text-sm">{projectStatus.current_wave || 'N/A'}</p>
+                      </div>
+                      <div className="bg-dark-800/50 rounded-lg p-4">
+                        <p className="text-xs text-dark-500 uppercase mb-1">Last Updated</p>
+                        <p className="font-medium text-dark-200">{projectStatus.last_updated || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    {/* Development Streams */}
+                    {projectStatus.development_streams.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-dark-300 mb-2">Development Streams</h3>
+                        <div className="space-y-2">
+                          {projectStatus.development_streams.map((stream, i) => (
+                            <div key={i} className="flex items-center justify-between bg-dark-800/50 rounded-lg p-3">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-mono text-dark-500">{stream.stream}</span>
+                                <span className="text-sm text-dark-200">{stream.module}</span>
+                                <Badge variant="default" size="sm">{stream.agent}</Badge>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-dark-400">{stream.progress}</span>
+                                <Badge
+                                  variant={stream.status.includes('Progress') ? 'warning' : stream.status.includes('Waiting') ? 'info' : 'default'}
+                                  size="sm"
+                                >
+                                  {stream.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Active Agents */}
+                    {projectStatus.active_agents.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-dark-300 mb-2">Active Agents</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {projectStatus.active_agents.map((agent, i) => (
+                            <div key={i} className="flex items-center gap-2 bg-dark-800/50 rounded-lg px-3 py-2">
+                              <Bot className="w-4 h-4 text-primary-400" />
+                              <span className="text-sm text-dark-200">{agent.agent}</span>
+                              <span className="text-xs text-dark-500">({agent.module})</span>
+                              <Badge
+                                variant={agent.status === 'Active' || agent.status.includes('Progress') ? 'success' : 'default'}
+                                size="sm"
+                              >
+                                {agent.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Workflow Phases Progress */}
+                    {projectStatus.workflow_phases.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-dark-300 mb-2">Workflow Progress</h3>
+                        <div className="flex flex-wrap gap-1">
+                          {projectStatus.workflow_phases.map((phase, i) => (
+                            <div
+                              key={i}
+                              className={`px-2 py-1 rounded text-xs ${
+                                phase.status.includes('COMPLETE') ? 'bg-emerald-500/20 text-emerald-400' :
+                                phase.status.includes('PROGRESS') || phase.status.includes('STARTING') ? 'bg-primary-500/20 text-primary-400' :
+                                'bg-dark-700 text-dark-500'
+                              }`}
+                              title={`${phase.step}: ${phase.agent} - ${phase.status}`}
+                            >
+                              {phase.step}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Blockers */}
+                    {projectStatus.blockers.length > 0 && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="w-4 h-4 text-amber-400" />
+                          <span className="text-sm font-semibold text-amber-200">Blockers</span>
+                        </div>
+                        {projectStatus.blockers.map((blocker, i) => (
+                          <div key={i} className="text-sm text-amber-100">
+                            <span className="font-medium">{blocker.issue}</span>
+                            <span className="text-amber-300"> → {blocker.resolution}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-dark-400">Select a project to view status</p>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data?.projects.map((project, i) => (
-              <ProjectCard key={project.id} project={project} index={i} />
-            ))}
+        </motion.div>
+      )}
+
+      {/* Available Agents - Collapsible */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="border-dark-600">
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setShowAgents(!showAgents)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-accent-500/20 flex items-center justify-center">
+                <Bot className="w-4 h-4 text-accent-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  Available Agents
+                  {showAgents ? (
+                    <ChevronUp className="w-4 h-4 text-dark-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-dark-500" />
+                  )}
+                </h2>
+                <p className="text-xs text-dark-400">{agentsData?.agents.length || 0} agents ready</p>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {showAgents && (
+            <div className="mt-4">
+              {agentsLoading ? (
+                <div className="flex justify-center py-4">
+                  <Spinner />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {Object.entries(agentCategoryConfig).map(([category, config]) => {
+                    const agents = agentsByCategory[category] || [];
+                    if (agents.length === 0) return null;
+                    const CategoryIcon = config.icon;
+
+                    return (
+                      <div key={category} className="bg-dark-800/30 rounded-lg p-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-6 h-6 rounded bg-${config.color}-500/20 flex items-center justify-center`}>
+                            <CategoryIcon className={`w-3 h-3 text-${config.color}-400`} />
+                          </div>
+                          <span className="text-xs font-medium text-dark-300">{config.label}</span>
+                          <span className="text-xs text-dark-500">({agents.length})</span>
+                        </div>
+                        <div className="space-y-1">
+                          {agents.slice(0, 3).map((agent) => (
+                            <div
+                              key={agent.id}
+                              className="text-xs text-dark-400 truncate pl-8"
+                              title={agent.description}
+                            >
+                              {agent.name}
+                            </div>
+                          ))}
+                          {agents.length > 3 && (
+                            <div className="text-xs text-dark-500 pl-8">+{agents.length - 3} more</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </motion.div>
+
+      {/* Projects List - Collapsible */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+      >
+        <Card className="border-dark-600">
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setShowRecentProjects(!showRecentProjects)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center">
+                <Rocket className="w-4 h-4 text-dark-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  Recent Projects
+                  {showRecentProjects ? (
+                    <ChevronUp className="w-4 h-4 text-dark-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-dark-500" />
+                  )}
+                </h2>
+                <p className="text-xs text-dark-400">{data?.projects.length || 0} projects</p>
+              </div>
+            </div>
+            <Link to="/new" onClick={(e) => e.stopPropagation()}>
+              <button className="flex items-center gap-1 text-primary-400 hover:text-primary-300 transition-colors text-xs">
+                <Plus className="w-3 h-3" />
+                New
+              </button>
+            </Link>
+          </div>
+
+          {showRecentProjects && (
+            <div className="mt-4">
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <Spinner />
+                </div>
+              ) : data?.projects.length === 0 ? (
+                <p className="text-dark-400 text-sm text-center py-4">No projects yet</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data?.projects.map((project, i) => (
+                    <ProjectCard key={project.id} project={project} index={i} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </motion.div>
     </div>
   );
 }

@@ -517,3 +517,203 @@ async def get_agent_info(agent_id: str, project_path: Optional[str] = None):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class ProjectStatusResponse(BaseModel):
+    project_name: str
+    project_path: str
+    current_phase: str
+    current_wave: Optional[str] = None
+    status: str
+    last_updated: Optional[str] = None
+    workflow_phases: list[dict] = []
+    development_streams: list[dict] = []
+    active_agents: list[dict] = []
+    blockers: list[dict] = []
+    raw_content: Optional[str] = None
+
+
+@router.get("/project-status/{project_name}", response_model=ProjectStatusResponse)
+async def get_project_status(project_name: str):
+    """
+    Read project status from the scaffolded project's status.md file.
+    """
+    try:
+        # Default scaffolded projects location
+        base_path = Path.home() / "bootstrapped-projects" / project_name
+        status_file = base_path / "docs" / "project-status" / "status.md"
+
+        if not status_file.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Status file not found for project '{project_name}'"
+            )
+
+        content = status_file.read_text(encoding='utf-8')
+
+        # Parse the status file
+        current_phase = ""
+        current_wave = ""
+        status = ""
+        last_updated = ""
+        workflow_phases = []
+        development_streams = []
+        active_agents = []
+        blockers = []
+
+        # Parse Current State table
+        state_match = re.search(
+            r'\*\*Current Phase\*\*\s*\|\s*([^\n|]+)',
+            content
+        )
+        if state_match:
+            current_phase = state_match.group(1).strip()
+
+        wave_match = re.search(
+            r'\*\*Current Wave\*\*\s*\|\s*([^\n|]+)',
+            content
+        )
+        if wave_match:
+            current_wave = wave_match.group(1).strip()
+
+        status_match = re.search(
+            r'\*\*Status\*\*\s*\|\s*([^\n|]+)',
+            content
+        )
+        if status_match:
+            status = status_match.group(1).strip()
+
+        updated_match = re.search(
+            r'\*\*Last Updated\*\*\s*\|\s*([^\n|]+)',
+            content
+        )
+        if updated_match:
+            last_updated = updated_match.group(1).strip()
+
+        # Parse Workflow Phases/Progress table (match both headers)
+        workflow_section = re.search(
+            r'## Workflow (?:Phases|Progress)\s*\n+\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n?)+)',
+            content
+        )
+        if workflow_section:
+            rows = workflow_section.group(1).strip().split('\n')
+            for row in rows:
+                if '|' in row:
+                    cols = [c.strip() for c in row.split('|')[1:-1]]
+                    if len(cols) >= 4:
+                        workflow_phases.append({
+                            "phase": cols[0],
+                            "step": cols[1],
+                            "agent": cols[2],
+                            "status": cols[3]
+                        })
+
+        # Parse Development Streams table
+        streams_section = re.search(
+            r'### Parallel Development Streams\s*\n\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n)+)',
+            content
+        )
+        if streams_section:
+            rows = streams_section.group(1).strip().split('\n')
+            for row in rows:
+                cols = [c.strip() for c in row.split('|')[1:-1]]
+                if len(cols) >= 5:
+                    development_streams.append({
+                        "stream": cols[0],
+                        "module": cols[1],
+                        "agent": cols[2],
+                        "status": cols[3],
+                        "progress": cols[4] if len(cols) > 4 else ""
+                    })
+
+        # Parse Active Agents table
+        agents_section = re.search(
+            r'## Active Agents\s*\n\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n)+)',
+            content
+        )
+        if agents_section:
+            rows = agents_section.group(1).strip().split('\n')
+            for row in rows:
+                cols = [c.strip() for c in row.split('|')[1:-1]]
+                if len(cols) >= 4:
+                    active_agents.append({
+                        "agent": cols[0],
+                        "role": cols[1],
+                        "module": cols[2],
+                        "status": cols[3]
+                    })
+
+        # Extract active agents from development streams (those with IN PROGRESS status)
+        if not active_agents and development_streams:
+            for stream in development_streams:
+                if 'IN PROGRESS' in stream.get('status', '').upper() or 'PROGRESS' in stream.get('status', ''):
+                    active_agents.append({
+                        "agent": stream.get('agent', ''),
+                        "role": "Developer",
+                        "module": stream.get('module', ''),
+                        "status": "Active"
+                    })
+
+        # Parse Blockers table
+        blockers_section = re.search(
+            r'## Blockers\s*\n\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n)+)',
+            content
+        )
+        if blockers_section:
+            rows = blockers_section.group(1).strip().split('\n')
+            for row in rows:
+                cols = [c.strip() for c in row.split('|')[1:-1]]
+                if len(cols) >= 3:
+                    blockers.append({
+                        "issue": cols[0],
+                        "impact": cols[1],
+                        "resolution": cols[2]
+                    })
+
+        return ProjectStatusResponse(
+            project_name=project_name,
+            project_path=str(base_path),
+            current_phase=current_phase,
+            current_wave=current_wave,
+            status=status,
+            last_updated=last_updated,
+            workflow_phases=workflow_phases,
+            development_streams=development_streams,
+            active_agents=active_agents,
+            blockers=blockers,
+            raw_content=content[:5000] if len(content) > 5000 else content
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/scaffolded-projects")
+async def list_scaffolded_projects():
+    """
+    List all scaffolded projects from the default directory.
+    """
+    try:
+        base_path = Path.home() / "bootstrapped-projects"
+
+        if not base_path.exists():
+            return {"projects": []}
+
+        projects = []
+        for item in base_path.iterdir():
+            if item.is_dir() and not item.name.startswith('.'):
+                status_file = item / "docs" / "project-status" / "status.md"
+                has_status = status_file.exists()
+
+                projects.append({
+                    "name": item.name,
+                    "path": str(item),
+                    "has_status": has_status
+                })
+
+        return {"projects": projects}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

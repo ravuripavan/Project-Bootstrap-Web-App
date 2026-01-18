@@ -202,7 +202,9 @@ export default function ScaffoldWorkflow() {
   const [projectName, setProjectName] = useState('');
   const [projectPath, setProjectPath] = useState('');
   const [projectOverview, setProjectOverview] = useState('');
-  const [showConfig, setShowConfig] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
+  const [showSessions, setShowSessions] = useState(true);
+  const [showPhases, setShowPhases] = useState(false);
   const [isScaffolding, setIsScaffolding] = useState(false);
   const [scaffoldResult, setScaffoldResult] = useState<{
     success: boolean;
@@ -581,35 +583,42 @@ export default function ScaffoldWorkflow() {
 
       {/* Active Agent Sessions */}
       {sessions.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Terminal className="w-5 h-5 text-green-400" />
+        <div className="space-y-3">
+          <div
+            className="flex items-center justify-between cursor-pointer group"
+            onClick={() => setShowSessions(!showSessions)}
+          >
+            <h3 className="text-sm font-semibold flex items-center gap-2 text-dark-300">
+              <Terminal className="w-4 h-4 text-green-400" />
               Active Sessions ({sessions.length})
+              {showSessions ? (
+                <ChevronUp className="w-4 h-4 text-dark-500 group-hover:text-dark-300" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-dark-500 group-hover:text-dark-300" />
+              )}
             </h3>
             {sessions.length > 1 && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearAllSessions}
-                className="text-dark-400 hover:text-red-400"
+                onClick={(e) => { e.stopPropagation(); clearAllSessions(); }}
+                className="text-dark-500 hover:text-red-400 text-xs"
               >
                 Clear All
               </Button>
             )}
           </div>
 
-          {sessions.map((session) => {
+          {showSessions && sessions.map((session) => {
             const PhaseIcon = session.phase.icon;
             const isLoading = isLoadingAgentInfo === session.id;
             const error = agentInfoErrors[session.id];
-            // Include agentInfo and status in key to force re-render on update
             const sessionKey = `${session.id}-${session.agentInfo ? 'loaded' : 'pending'}-${session.status}`;
 
             const statusConfig = {
-              running: { variant: 'success' as const, label: 'Running', color: 'from-green-500/10 to-emerald-500/10 border-green-500/30' },
-              completed: { variant: 'info' as const, label: 'Completed', color: 'from-blue-500/10 to-cyan-500/10 border-blue-500/30' },
-              stopped: { variant: 'warning' as const, label: 'Stopped', color: 'from-yellow-500/10 to-orange-500/10 border-yellow-500/30' },
+              running: { variant: 'success' as const, label: 'Running', color: 'border-green-500/30 bg-green-500/5' },
+              completed: { variant: 'info' as const, label: 'Done', color: 'border-blue-500/30 bg-blue-500/5' },
+              stopped: { variant: 'warning' as const, label: 'Stopped', color: 'border-yellow-500/30 bg-yellow-500/5' },
             };
             const currentStatus = statusConfig[session.status || 'running'];
 
@@ -619,226 +628,156 @@ export default function ScaffoldWorkflow() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <Card className={`p-5 bg-gradient-to-r ${currentStatus.color}`}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${session.phase.color} flex items-center justify-center`}>
-                        <PhaseIcon className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-lg">
-                            {(session.agentInfo?.name || session.phase.name).replace(/\s*Agent\s*$/i, '')} Agent
-                          </h3>
-                          <Badge variant={currentStatus.variant} size="sm">{currentStatus.label}</Badge>
-                          {session.agentInfo?.model && (
-                            <Badge variant="default" size="sm">{session.agentInfo.model}</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-dark-400">
-                          {session.agentInfo?.description || session.phase.description}
-                        </p>
-                        <p className="text-xs text-dark-500 mt-1">
-                          Agent: <code className="text-primary-400">{session.phase.agent}</code> | Project: <span className="text-primary-400">{session.projectName}</span>
-                        </p>
-                      </div>
+                <div className={`p-3 rounded-lg border ${currentStatus.color}`}>
+                  <div className="flex items-center gap-3">
+                    {/* Icon */}
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${session.phase.color} flex items-center justify-center flex-shrink-0`}>
+                      <PhaseIcon className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex items-center gap-1">
-                      {/* Relaunch button - show for stopped/completed sessions */}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">
+                          {(session.agentInfo?.name || session.phase.name).replace(/\s*Agent\s*$/i, '')}
+                        </span>
+                        <Badge variant={currentStatus.variant} size="sm">{currentStatus.label}</Badge>
+                        <span className="text-xs text-dark-500">{session.projectName}</span>
+                      </div>
+                      <p className="text-xs text-dark-400 truncate">
+                        {session.agentInfo?.description || session.phase.description}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       {(session.status === 'stopped' || session.status === 'completed') && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => relaunchSession(session)}
                           disabled={isRelaunching === session.id}
-                          className="text-primary-400 hover:text-primary-300"
-                          title="Relaunch terminal"
+                          className="text-primary-400 hover:text-primary-300 p-1"
+                          title="Relaunch"
                         >
                           {isRelaunching === session.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3 h-3 animate-spin" />
                           ) : (
-                            <Play className="w-4 h-4" />
+                            <Play className="w-3 h-3" />
                           )}
                         </Button>
                       )}
-                      {/* Status controls */}
                       {session.status !== 'completed' && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateSessionStatus(session.id, 'completed');
-                          }}
-                          className="text-green-400 hover:text-green-300"
-                          title="Mark as completed"
+                          onClick={(e) => { e.stopPropagation(); updateSessionStatus(session.id, 'completed'); }}
+                          className="text-green-400 hover:text-green-300 p-1"
+                          title="Mark complete"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle2 className="w-3 h-3" />
                         </Button>
                       )}
                       {session.status === 'running' && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateSessionStatus(session.id, 'stopped');
-                          }}
-                          className="text-yellow-400 hover:text-yellow-300"
-                          title="Mark as stopped"
+                          onClick={(e) => { e.stopPropagation(); updateSessionStatus(session.id, 'stopped'); }}
+                          className="text-yellow-400 hover:text-yellow-300 p-1"
+                          title="Mark stopped"
                         >
-                          <Square className="w-4 h-4" />
+                          <Square className="w-3 h-3" />
                         </Button>
                       )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRefreshAgentInfo(session)}
-                        disabled={isLoading}
-                        className="text-dark-400 hover:text-dark-200"
-                        title="Refresh agent info"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-4 h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         onClick={() => clearSession(session.id)}
-                        className="text-dark-400 hover:text-red-400"
-                        title="Remove session"
+                        className="text-dark-400 hover:text-red-400 p-1"
+                        title="Remove"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3 h-3" />
                       </Button>
                     </div>
                   </div>
 
-                  {/* Error message */}
+                  {/* Error message - compact */}
                   {error && (
-                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-red-400">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>{error}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRefreshAgentInfo(session)}
-                          className="ml-auto text-red-400 hover:text-red-300"
-                        >
-                          Retry
-                        </Button>
-                      </div>
+                    <div className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      <span className="truncate">{error}</span>
                     </div>
                   )}
-
-                  {/* What the agent is doing - from API or fallback to static */}
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-dark-300 mb-2">
-                      {isLoading ? 'Loading workflow...' : 'This agent will:'}
-                    </p>
-                    {isLoading ? (
-                      <div className="flex items-center gap-2 text-sm text-dark-400">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Fetching agent workflow details...</span>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {(session.agentInfo?.workflow?.length
-                          ? session.agentInfo.workflow
-                          : session.phase.details
-                        ).map((detail, i) => (
-                          <div key={i} className="flex items-center gap-2 text-sm text-dark-400">
-                            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            {detail}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tools used by this agent */}
-                  {session.agentInfo?.tools && session.agentInfo.tools.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-medium text-dark-300 mb-2">Tools:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {session.agentInfo.tools.map((tool, i) => (
-                          <Badge key={i} variant="default" size="sm">{tool}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Command that was executed */}
-                  <div className="bg-dark-900/50 rounded-lg p-3 mb-3">
-                    <p className="text-xs text-dark-500 mb-1">Executed command:</p>
-                    <code className="text-xs text-green-400 break-all">{session.command}</code>
-                  </div>
-
-                  {/* Agent file location */}
-                  <div className="flex items-center justify-between text-sm flex-wrap gap-2">
-                    <div className="flex items-center gap-2 text-dark-400">
-                      <FileText className="w-4 h-4" />
-                      <span>Agent definition:</span>
-                      <code className="bg-dark-700 px-2 py-0.5 rounded text-primary-400 text-xs">
-                        {session.agentInfo?.file_path || `.claude/agents/${session.phase.agent}.md`}
-                      </code>
-                    </div>
-                    <span className="text-xs text-dark-500">
-                      Launched {new Date(session.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                </Card>
+                </div>
               </motion.div>
             );
           })}
         </div>
       )}
 
-      {/* Phase Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {workflowPhases.map((phase, index) => (
-          <PhaseCard
-            key={phase.id}
-            phase={phase}
-            index={index}
-            onTrigger={() => openTerminal(phase)}
-          />
-        ))}
+      {/* Phase Cards Grid - Collapsible */}
+      <div className="space-y-3">
+        <div
+          className="flex items-center justify-between cursor-pointer group"
+          onClick={() => setShowPhases(!showPhases)}
+        >
+          <h3 className="text-sm font-semibold flex items-center gap-2 text-dark-300">
+            <Code className="w-4 h-4 text-accent-400" />
+            Individual Phases ({workflowPhases.length})
+            {showPhases ? (
+              <ChevronUp className="w-4 h-4 text-dark-500 group-hover:text-dark-300" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-dark-500 group-hover:text-dark-300" />
+            )}
+          </h3>
+        </div>
+
+        {showPhases && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2"
+          >
+            {workflowPhases.map((phase, index) => (
+              <PhaseCard
+                key={phase.id}
+                phase={phase}
+                index={index}
+                onTrigger={() => openTerminal(phase)}
+                compact
+              />
+            ))}
+          </motion.div>
+        )}
       </div>
 
-      {/* Full Orchestration Button */}
-      <Card className="p-4 bg-gradient-to-r from-primary-500/10 to-accent-500/10 border-primary-500/30">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-              <Play className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-medium">Full Orchestration</h3>
-              <p className="text-sm text-dark-400">Run all phases in sequence with the orchestration agent</p>
-            </div>
-          </div>
-          <Button
-            onClick={() => openTerminal({
-              id: 'orchestration',
-              name: 'Full Orchestration',
-              description: 'Bootstrap complete project',
-              icon: Play,
-              agent: 'orchestration',
-              agentCommand: '/agent:orchestration',
-              color: 'from-primary-500 to-accent-500',
-              details: ['All phases executed in order', 'Automatic dependency handling', 'User approval checkpoints'],
-            })}
-            glow
-          >
-            <Play className="w-4 h-4 mr-2" />
-            Start Orchestration
-          </Button>
+      {/* Full Orchestration - Compact */}
+      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-primary-500/10 to-accent-500/10 border border-primary-500/30 rounded-lg">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
+          <Play className="w-4 h-4 text-white" />
         </div>
-      </Card>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium">Full Orchestration</h3>
+          <p className="text-xs text-dark-400 truncate">Run all phases with orchestration agent</p>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => openTerminal({
+            id: 'orchestration',
+            name: 'Full Orchestration',
+            description: 'Bootstrap complete project',
+            icon: Play,
+            agent: 'orchestration',
+            agentCommand: '/agent:orchestration',
+            color: 'from-primary-500 to-accent-500',
+            details: ['All phases executed in order', 'Automatic dependency handling', 'User approval checkpoints'],
+          })}
+          glow
+        >
+          <Play className="w-3 h-3 mr-1" />
+          Start
+        </Button>
+      </div>
 
       {/* Terminal Command Dialog */}
       <Dialog open={!!selectedPhase} onOpenChange={(open) => !open && setSelectedPhase(null)}>
@@ -984,12 +923,35 @@ function PhaseCard({
   phase,
   index,
   onTrigger,
+  compact = false,
 }: {
   phase: WorkflowPhase;
   index: number;
   onTrigger: () => void;
+  compact?: boolean;
 }) {
   const Icon = phase.icon;
+
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: index * 0.03 }}
+        onClick={onTrigger}
+        className={`p-2 rounded-lg bg-dark-800/50 border border-dark-700 hover:border-dark-500 cursor-pointer transition-all group`}
+      >
+        <div className="flex items-center gap-2">
+          <div className={`w-6 h-6 rounded bg-gradient-to-br ${phase.color} flex items-center justify-center flex-shrink-0`}>
+            <Icon className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-xs font-medium text-dark-300 group-hover:text-dark-100 truncate">
+            {phase.name}
+          </span>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
