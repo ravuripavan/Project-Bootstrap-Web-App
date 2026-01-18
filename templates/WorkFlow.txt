@@ -67,45 +67,220 @@ The Orchestrator **MUST** perform the following status updates. **FAILURE TO UPD
 ## WORKFLOW OVERVIEW
 
 ```
-ORCHESTRATION FLOW:
-==================
+ORCHESTRATION FLOW WITH ITERATIVE LOOPS:
+========================================
 
-[STATUS UPDATE: Phase Start] ←── MANDATORY
+[STATUS UPDATE: Phase 1 Start] ←── MANDATORY
     ↓
-PO (Product Owner)
-    ↓
-RE (Requirements Engineer)
-    ↓
-UI/UX Designer
-    ↓
-ARCHITECTS (Full-Stack, Backend, AI/ML)
-    ↓
+┌─────────────────────────────────────────────────────────────┐
+│  PHASE 1 - PLANNING & DESIGN                                │
+├─────────────────────────────────────────────────────────────┤
+│  [STATUS: Sub-Phase 1.1 Start]                              │
+│      PO (Product Owner) → Vision, Epics, Stories            │
+│  [STATUS: Sub-Phase 1.1 End]                                │
+│      ↓                                                      │
+│  [STATUS: Sub-Phase 1.2 Start]                              │
+│      RE (Requirements Engineer) → Requirements              │
+│  [STATUS: Sub-Phase 1.2 End]                                │
+│      ↓                                                      │
+│  [STATUS: Sub-Phase 1.3 Start]                              │
+│      UI/UX Designer → Wireframes, User Flows                │
+│  [STATUS: Sub-Phase 1.3 End]                                │
+│      ↓                                                      │
+│  [STATUS: Sub-Phase 1.4 Start]                              │
+│      ARCHITECTS → System Design, API Contracts              │
+│  [STATUS: Sub-Phase 1.4 End]                                │
+└─────────────────────────────────────────────────────────────┘
 [STATUS UPDATE: Phase 1 Complete] ←── MANDATORY
     ↓
-DEV (Parallel Development + UNIT TESTS)
     ↓
-[STATUS UPDATE: Phase 2 Complete] ←── MANDATORY
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    ITERATIVE DEVELOPMENT LOOP (Per Module)                    ║
+║          Phases 2, 3, 4 repeat until ALL Architects approve module           ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  FOR EACH MODULE:                                                             ║
+║  ┌───────────────────────────────────────────────────────────────────────┐   ║
+║  │                                                                       │   ║
+║  │  [STATUS: Phase 2 Start - Module X]                                   │   ║
+║  │  ┌─────────────────────────────────────────────────────────────────┐ │   ║
+║  │  │  PHASE 2 - DEVELOPMENT + ALL TESTS                              │ │   ║
+║  │  ├─────────────────────────────────────────────────────────────────┤ │   ║
+║  │  │  [STATUS: Sub-Phase 2.1 Start]                                  │ │   ║
+║  │  │      CODE IMPLEMENTATION → Feature code                         │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.1 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.2 Start]                                  │ │   ║
+║  │  │      UNIT TEST (UT) DEVELOPMENT → Unit tests for all code      │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.2 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.3 Start]                                  │ │   ║
+║  │  │      INTEGRATION TEST (INT) DEVELOPMENT → Integration tests    │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.3 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.4 Start]                                  │ │   ║
+║  │  │      API TEST DEVELOPMENT → API contract tests                 │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.4 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.5 Start]                                  │ │   ║
+║  │  │      E2E TEST DEVELOPMENT → End-to-end test scenarios          │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.5 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.6 Start]                                  │ │   ║
+║  │  │      RUN ALL TESTS → Execute UT, INT, API tests locally        │ │   ║
+║  │  │      ALL TESTS MUST PASS before proceeding                      │ │   ║
+║  │  │  [STATUS: Sub-Phase 2.6 End]                                    │ │   ║
+║  │  └─────────────────────────────────────────────────────────────────┘ │   ║
+║  │  [STATUS: Phase 2 Complete - Module X]                                │   ║
+║  │      ↓                                                                │   ║
+║  │  [STATUS: Phase 3 Start - Module X]                                   │   ║
+║  │  ┌─────────────────────────────────────────────────────────────────┐ │   ║
+║  │  │  PHASE 3 - ARCHITECT REVIEW                                     │ │   ║
+║  │  ├─────────────────────────────────────────────────────────────────┤ │   ║
+║  │  │  [STATUS: Sub-Phase 3.1 Start]                                  │ │   ║
+║  │  │      Full-Stack Architect Review                                │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.1 End] → APPROVE or REWORK               │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.2 Start]                                  │ │   ║
+║  │  │      Backend Architect Review                                   │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.2 End] → APPROVE or REWORK               │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.3 Start]                                  │ │   ║
+║  │  │      AI/ML Architect Review (if applicable)                     │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.3 End] → APPROVE or REWORK               │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.4 Start]                                  │ │   ║
+║  │  │      CONSOLIDATED DECISION                                      │ │   ║
+║  │  │  [STATUS: Sub-Phase 3.4 End]                                    │ │   ║
+║  │  │                                                                 │ │   ║
+║  │  │  ┌─────────────┐           ┌─────────────┐                      │ │   ║
+║  │  │  │ ALL APPROVE │──YES──→   │ PHASE 5     │                      │ │   ║
+║  │  │  └─────────────┘           └─────────────┘                      │ │   ║
+║  │  │         │                                                       │ │   ║
+║  │  │        NO (ANY architect requests rework)                       │ │   ║
+║  │  │         ↓                                                       │ │   ║
+║  │  └─────────────────────────────────────────────────────────────────┘ │   ║
+║  │  [STATUS: Phase 3 Complete - REWORK REQUIRED]                         │   ║
+║  │      ↓                                                                │   ║
+║  │  [STATUS: Phase 4 Start - Iteration N]                                │   ║
+║  │  ┌─────────────────────────────────────────────────────────────────┐ │   ║
+║  │  │  PHASE 4 - REWORK                                               │ │   ║
+║  │  ├─────────────────────────────────────────────────────────────────┤ │   ║
+║  │  │  [STATUS: Sub-Phase 4.1 Start]                                  │ │   ║
+║  │  │      Issue Analysis & Assignment                                │ │   ║
+║  │  │  [STATUS: Sub-Phase 4.1 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 4.2 Start]                                  │ │   ║
+║  │  │      Code Rework + Update ALL affected tests                    │ │   ║
+║  │  │  [STATUS: Sub-Phase 4.2 End]                                    │ │   ║
+║  │  │      ↓                                                          │ │   ║
+║  │  │  [STATUS: Sub-Phase 4.3 Start]                                  │ │   ║
+║  │  │      Run ALL Tests (UT, INT, API) - ALL MUST PASS               │ │   ║
+║  │  │  [STATUS: Sub-Phase 4.3 End]                                    │ │   ║
+║  │  └─────────────────────────────────────────────────────────────────┘ │   ║
+║  │  [STATUS: Phase 4 Complete - Iteration N]                             │   ║
+║  │      │                                                                │   ║
+║  │      └────────────────→ BACK TO PHASE 3 (Re-review) ─────────────────┘   ║
+║  │                                                                       │   ║
+║  │  ════════════════════════════════════════════════════════════════════    ║
+║  │  LOOP CONTINUES UNTIL ALL ARCHITECTS APPROVE MODULE                  │   ║
+║  │  ════════════════════════════════════════════════════════════════════    ║
+║  │                                                                       │   ║
+║  └───────────────────────────────────────────────────────────────────────┘   ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+    ↓ (Only when ALL architects approve)
     ↓
-ARCHITECT REVIEW
+[STATUS UPDATE: Phase 3 Complete - ALL APPROVED] ←── MANDATORY
     ↓
-REWORK IF REQUIRED ←─────────────┐
-    ↓                            │
-[STATUS UPDATE: Rework Cycle]    │
-    ↓                            │
-ITERATE LOOP ────────────────────┘
-(Until ALL Architects Approve)
     ↓
-[STATUS UPDATE: Review Complete] ←── MANDATORY
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    E2E TESTING WITH FAILURE LOOP                              ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  [STATUS: Phase 5 Start]                                                      ║
+║  ┌─────────────────────────────────────────────────────────────────────────┐ ║
+║  │  PHASE 5 - COMPREHENSIVE TESTING                                        │ ║
+║  ├─────────────────────────────────────────────────────────────────────────┤ ║
+║  │  [STATUS: Sub-Phase 5.1 Start]                                          │ ║
+║  │      QA AUTOMATION TESTING (INT + API + REGRESSION)                     │ ║
+║  │  [STATUS: Sub-Phase 5.1 End]                                            │ ║
+║  │      ↓                                                                  │ ║
+║  │  [STATUS: Sub-Phase 5.2 Start]                                          │ ║
+║  │      E2E TEST EXECUTION (Run all E2E tests)                             │ ║
+║  │          - Execute all developed E2E test scenarios                     │ ║
+║  │          - Cross-browser testing                                        │ ║
+║  │          - Critical user flow validation                                │ ║
+║  │  [STATUS: Sub-Phase 5.2 End]                                            │ ║
+║  │      ↓                                                                  │ ║
+║  │  [STATUS: Sub-Phase 5.3 Start]                                          │ ║
+║  │      VISUAL REGRESSION TESTING                                          │ ║
+║  │  [STATUS: Sub-Phase 5.3 End]                                            │ ║
+║  │      ↓                                                                  │ ║
+║  │  [STATUS: Sub-Phase 5.4 Start]                                          │ ║
+║  │      TEST RESULTS CONSOLIDATION                                         │ ║
+║  │  [STATUS: Sub-Phase 5.4 End]                                            │ ║
+║  │                                                                         │ ║
+║  │  ┌──────────────────────────────────────────────────────────────────┐  │ ║
+║  │  │  E2E/TESTING DECISION GATE                                       │  │ ║
+║  │  ├──────────────────────────────────────────────────────────────────┤  │ ║
+║  │  │                                                                  │  │ ║
+║  │  │  IF ALL TESTS PASS ──→ [STATUS: Phase 5 PASSED] → Phase 6       │  │ ║
+║  │  │                                                                  │  │ ║
+║  │  │  IF E2E/TESTS FAIL ──→ [STATUS: Phase 5 FAILED - Defects]       │  │ ║
+║  │  │         │                                                        │  │ ║
+║  │  │         ↓                                                        │  │ ║
+║  │  │  ┌────────────────────────────────────────────────────────────┐ │  │ ║
+║  │  │  │  DEFECT REPORTING                                          │ │  │ ║
+║  │  │  │  - Log all failed tests with details                       │ │  │ ║
+║  │  │  │  - Categorize defects by severity                          │ │  │ ║
+║  │  │  │  - Assign defects to developers                            │ │  │ ║
+║  │  │  │  - Create defect fix tasks                                 │ │  │ ║
+║  │  │  └────────────────────────────────────────────────────────────┘ │  │ ║
+║  │  │         │                                                        │  │ ║
+║  │  │         ↓                                                        │  │ ║
+║  │  │  ╔════════════════════════════════════════════════════════════╗ │  │ ║
+║  │  │  ║  RETURN TO PHASE 2/3/4 ITERATIVE LOOP                     ║ │  │ ║
+║  │  │  ║  Developers fix defects, run tests, architects re-review  ║ │  │ ║
+║  │  │  ║  ITERATE UNTIL ALL TESTS PASS                             ║ │  │ ║
+║  │  │  ╚════════════════════════════════════════════════════════════╝ │  │ ║
+║  │  │                                                                  │  │ ║
+║  │  └──────────────────────────────────────────────────────────────────┘  │ ║
+║  └─────────────────────────────────────────────────────────────────────────┘ ║
+║  [STATUS: Phase 5 Complete - ALL TESTS PASSED]                               ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+    ↓ (Only when ALL tests pass)
     ↓
-TESTING
+[STATUS UPDATE: Phase 5 Complete - PASSED] ←── MANDATORY
     ↓
-[STATUS UPDATE: Testing Complete] ←── MANDATORY
+[STATUS: Phase 6 Start]
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 6 - FINAL APPROVAL                                       │
+├─────────────────────────────────────────────────────────────────┤
+│  [STATUS: Sub-Phase 6.1 Start]                                  │
+│      Lead Architect Final Review                                │
+│  [STATUS: Sub-Phase 6.1 End]                                    │
+│      ↓                                                          │
+│  [STATUS: Sub-Phase 6.2 Start]                                  │
+│      QA Lead Final Review                                       │
+│  [STATUS: Sub-Phase 6.2 End]                                    │
+│      ↓                                                          │
+│  [STATUS: Sub-Phase 6.3 Start]                                  │
+│      FINAL SIGN-OFF                                             │
+│  [STATUS: Sub-Phase 6.3 End]                                    │
+└─────────────────────────────────────────────────────────────────┘
+[STATUS UPDATE: Phase 6 Complete - APPROVED] ←── MANDATORY
     ↓
-FINAL APPROVAL
-    ↓
-[STATUS UPDATE: Phase/Wave Complete] ←── MANDATORY
-    ↓
-NEXT PHASE/WAVE
+[STATUS: Phase 7 Start]
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 7 - NEXT WAVE/PHASE                                      │
+├─────────────────────────────────────────────────────────────────┤
+│  [STATUS: Sub-Phase 7.1] Completion Summary                     │
+│  [STATUS: Sub-Phase 7.2] Next Wave/Phase Planning               │
+│  [STATUS: Sub-Phase 7.3] Kickoff                                │
+└─────────────────────────────────────────────────────────────────┘
+[STATUS UPDATE: Phase 7 Complete / Next Wave Start] ←── MANDATORY
 ```
 
 ---
@@ -564,96 +739,316 @@ Orchestrator MUST update status.md:
 
 ---
 
-### PHASE 2 - DEVELOPMENT (PARALLEL EXECUTION)
+### PHASE 2 - DEVELOPMENT + ALL TESTS (PARALLEL EXECUTION)
 
 #### **STATUS UPDATE: Phase 2 Start**
 ```
 Orchestrator MUST update status.md:
-- Current Phase: Phase 2 - Development
+- Current Phase: Phase 2 - Development + All Tests
 - Status: STARTING
 - Timestamp: {now}
 - Parallel Streams: {count}
 - Developer Assignments: {list}
+- Module: {module-name}
 ```
 
-#### Step 2.1: Parallel Development Wave
+#### Phase 2 Sub-Phases (Per Module)
 
-##### **STATUS UPDATE: Wave Start**
+**CRITICAL: Phase 2 includes BOTH code implementation AND all test development**
+
 ```
-- Wave: Development Wave {N}
+PHASE 2 SUB-PHASES:
+===================
+2.1 - Code Implementation
+2.2 - Unit Test (UT) Development
+2.3 - Integration Test (INT) Development
+2.4 - API Test Development
+2.5 - E2E Test Development
+2.6 - Run ALL Tests & Verify
+```
+
+---
+
+#### Step 2.1: Code Implementation
+
+##### **STATUS UPDATE: Sub-Phase 2.1 Start**
+```
+- Sub-Phase: 2.1 - Code Implementation
 - Status: STARTING
-- Streams Planned: {count}
+- Developer: {agent-name}
+- Module: {module-name}
+- Input: Architecture spec, requirements
 - Timestamp: {now}
 ```
 
 **Input**: Approved architecture, requirements, UX designs
-**Output**: Implemented code with unit tests
+**Output**: Implemented feature code
 
-**Execution Model**:
-- Up to 4 modules developed in parallel
-- Each developer assigned independent module
-- Orchestrator coordinates shared components
-- Dependencies respected (dependent modules wait)
+**Developer Responsibilities**:
+- Implement feature code per architecture spec
+- Follow coding standards and patterns
+- Document code with inline comments
+- Prepare code for all test types
 
-##### **Sub-Wave/Stream Status Updates**
-
-For EACH parallel development stream:
-
-###### **STATUS UPDATE: Sub-Wave/Stream Start**
+##### **STATUS UPDATE: Sub-Phase 2.1 End**
 ```
-- Sub-Wave: Stream {X} - {Module Name}
+- Sub-Phase: 2.1 - Code Implementation
+- Status: ✅ COMPLETE
+- Files Created: {count}
+- Lines of Code: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 2.2: Unit Test (UT) Development
+
+##### **STATUS UPDATE: Sub-Phase 2.2 Start**
+```
+- Sub-Phase: 2.2 - Unit Test Development
 - Status: STARTING
 - Developer: {agent-name}
 - Module: {module-name}
-- Input: Architecture spec, requirements for module
 - Timestamp: {now}
 ```
 
-**CRITICAL - Unit Testing Requirement**:
+**Output**: Complete unit test suite for all code
+
+**Unit Test Requirements**:
 ```
-MANDATORY FOR ALL DEVELOPERS:
-1. Write unit tests for ALL new code
-2. Achieve minimum 80% code coverage
-3. Run ALL tests locally before submission
-4. ALL tests MUST pass - no exceptions
-5. Fix failing tests immediately
+MANDATORY FOR ALL CODE:
+1. Write unit tests for ALL functions/methods
+2. Test all branches and edge cases
+3. Achieve minimum 80% code coverage
+4. Use mocking for external dependencies
+5. Test both success and failure scenarios
+6. Test boundary conditions
 ```
 
-###### **STATUS UPDATE: Sub-Wave/Stream End**
+**Unit Test Types**:
+- Function/method unit tests
+- Component unit tests
+- Service unit tests
+- Utility function tests
+
+##### **STATUS UPDATE: Sub-Phase 2.2 End**
 ```
-- Sub-Wave: Stream {X} - {Module Name}
+- Sub-Phase: 2.2 - Unit Test Development
 - Status: ✅ COMPLETE
+- Unit Tests Written: {count}
+- Code Coverage: {percentage}%
+- Timestamp: {now}
+```
+
+---
+
+#### Step 2.3: Integration Test (INT) Development
+
+##### **STATUS UPDATE: Sub-Phase 2.3 Start**
+```
+- Sub-Phase: 2.3 - Integration Test Development
+- Status: STARTING
 - Developer: {agent-name}
 - Module: {module-name}
-- Unit Tests: {count} tests, {coverage}% coverage
-- Files: {count} files created/modified
-- Quality Gate: PASSED (all tests passing)
 - Timestamp: {now}
 ```
 
-**Quality Gate**: All code has passing unit tests with 80%+ coverage
+**Output**: Integration tests for module interactions
 
-##### **STATUS UPDATE: Wave End**
+**Integration Test Requirements**:
 ```
-- Wave: Development Wave {N}
+MANDATORY INTEGRATION TESTS:
+1. Test module-to-module communication
+2. Test database operations (CRUD)
+3. Test service layer interactions
+4. Test external service integrations
+5. Test data flow across components
+6. Test transaction boundaries
+```
+
+**Integration Test Types**:
+- Database integration tests
+- Service-to-service tests
+- Component interaction tests
+- Message queue tests (if applicable)
+
+##### **STATUS UPDATE: Sub-Phase 2.3 End**
+```
+- Sub-Phase: 2.3 - Integration Test Development
 - Status: ✅ COMPLETE
-- Streams Completed: {count}
-- Total Files: {count}
-- Total Unit Tests: {count}
-- Average Coverage: {percentage}%
+- Integration Tests Written: {count}
+- Services Tested: {list}
 - Timestamp: {now}
 ```
 
-#### **STATUS UPDATE: Phase 2 Complete**
+---
+
+#### Step 2.4: API Test Development
+
+##### **STATUS UPDATE: Sub-Phase 2.4 Start**
+```
+- Sub-Phase: 2.4 - API Test Development
+- Status: STARTING
+- Developer: {agent-name}
+- Module: {module-name}
+- API Endpoints: {count}
+- Timestamp: {now}
+```
+
+**Output**: API contract tests for all endpoints
+
+**API Test Requirements**:
+```
+MANDATORY API TESTS:
+1. Test all API endpoints (GET, POST, PUT, DELETE)
+2. Test request validation
+3. Test response format and status codes
+4. Test authentication/authorization
+5. Test error responses
+6. Test rate limiting (if applicable)
+7. Test API versioning
+```
+
+**API Test Types**:
+- Endpoint contract tests
+- Request/response validation tests
+- Authentication tests
+- Authorization tests
+- Error handling tests
+
+##### **STATUS UPDATE: Sub-Phase 2.4 End**
+```
+- Sub-Phase: 2.4 - API Test Development
+- Status: ✅ COMPLETE
+- API Tests Written: {count}
+- Endpoints Covered: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 2.5: E2E Test Development
+
+##### **STATUS UPDATE: Sub-Phase 2.5 Start**
+```
+- Sub-Phase: 2.5 - E2E Test Development
+- Status: STARTING
+- Developer: {agent-name}
+- Module: {module-name}
+- User Flows: {count}
+- Timestamp: {now}
+```
+
+**Output**: End-to-end test scenarios for user flows
+
+**E2E Test Requirements**:
+```
+MANDATORY E2E TESTS:
+1. Test complete user flows (happy path)
+2. Test critical business scenarios
+3. Test cross-browser compatibility
+4. Test responsive design scenarios
+5. Test error handling flows
+6. Test authentication flows
+7. Test data persistence across sessions
+```
+
+**E2E Test Types**:
+- User journey tests (Playwright)
+- Critical path tests
+- Cross-browser tests
+- Mobile/responsive tests
+- Authentication flow tests
+
+##### **STATUS UPDATE: Sub-Phase 2.5 End**
+```
+- Sub-Phase: 2.5 - E2E Test Development
+- Status: ✅ COMPLETE
+- E2E Tests Written: {count}
+- User Flows Covered: {count}
+- Browsers Targeted: {list}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 2.6: Run ALL Tests & Verify
+
+##### **STATUS UPDATE: Sub-Phase 2.6 Start**
+```
+- Sub-Phase: 2.6 - Run All Tests & Verify
+- Status: STARTING
+- Developer: {agent-name}
+- Module: {module-name}
+- Tests to Run: UT={count}, INT={count}, API={count}, E2E={count}
+- Timestamp: {now}
+```
+
+**CRITICAL - All Tests Must Pass**:
+```
+╔══════════════════════════════════════════════════════════════╗
+║  MANDATORY TEST EXECUTION BEFORE PROCEEDING                  ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  1. Run ALL Unit Tests                                       ║
+║     - ALL must pass                                          ║
+║     - Coverage must be 80%+                                  ║
+║                                                              ║
+║  2. Run ALL Integration Tests                                ║
+║     - ALL must pass                                          ║
+║     - No database errors                                     ║
+║                                                              ║
+║  3. Run ALL API Tests                                        ║
+║     - ALL must pass                                          ║
+║     - All endpoints validated                                ║
+║                                                              ║
+║  4. Run E2E Tests (Local)                                    ║
+║     - Critical paths must pass                               ║
+║     - UI renders correctly                                   ║
+║                                                              ║
+║  ⛔ DO NOT proceed if ANY test fails                         ║
+║  ⛔ Fix ALL failing tests before submission                  ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**Verification Checklist**:
+- [ ] All unit tests passing
+- [ ] Code coverage ≥ 80%
+- [ ] All integration tests passing
+- [ ] All API tests passing
+- [ ] E2E critical paths passing
+- [ ] No lint errors
+- [ ] No type errors
+
+##### **STATUS UPDATE: Sub-Phase 2.6 End**
+```
+- Sub-Phase: 2.6 - Run All Tests & Verify
+- Status: ✅ COMPLETE
+- Unit Tests: {passed}/{total} PASSED, {coverage}% coverage
+- Integration Tests: {passed}/{total} PASSED
+- API Tests: {passed}/{total} PASSED
+- E2E Tests: {passed}/{total} PASSED
+- All Tests Passing: YES
+- Quality Gate: PASSED
+- Timestamp: {now}
+```
+
+---
+
+#### **STATUS UPDATE: Phase 2 Complete (Per Module)**
 ```
 Orchestrator MUST update status.md:
 - Phase 2 Status: ✅ COMPLETE
+- Module: {module-name}
 - Completion Time: {now}
-- Total Waves: {count}
-- Modules Completed: {count}
-- Total Unit Tests: {count}
-- Average Coverage: {percentage}%
-- Next: Phase 3 - Architect Review
+- Code Implementation: ✅
+- Unit Tests: {count} tests, {coverage}% coverage
+- Integration Tests: {count} tests
+- API Tests: {count} tests
+- E2E Tests: {count} tests
+- All Tests Passing: YES
+- Next: Phase 3 - Architect Review for {module-name}
 ```
 
 ---
@@ -1220,17 +1615,118 @@ Orchestrator MUST update status.md:
 
 **Quality Gate**: All tests pass (integration + E2E + visual)
 
+---
+
+#### Step 5.5: E2E Failure Handling (If Tests Fail)
+
+##### **STATUS UPDATE: E2E Failure Detected**
+```
+- Event: E2E/Testing FAILURE
+- Status: ⚠️ DEFECTS FOUND
+- Failed Tests: {count}
+- Critical Defects: {count}
+- High Defects: {count}
+- Medium Defects: {count}
+- Timestamp: {now}
+```
+
+**When E2E or any Phase 5 tests FAIL:**
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    E2E FAILURE HANDLING PROTOCOL                             ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  IF E2E TESTS FAIL:                                                          ║
+║  ─────────────────────────────────────────────────────────────────────────   ║
+║                                                                              ║
+║  1. DEFECT LOGGING                                                           ║
+║     - Log ALL failed tests with full details                                 ║
+║     - Capture screenshots/logs for each failure                              ║
+║     - Categorize defects: Critical / High / Medium / Low                     ║
+║                                                                              ║
+║  2. DEFECT ASSIGNMENT                                                        ║
+║     - Assign each defect to responsible developer                            ║
+║     - Link defect to original module/component                               ║
+║     - Set priority based on severity                                         ║
+║                                                                              ║
+║  3. UPDATE STATUS                                                            ║
+║     [STATUS: Phase 5 FAILED - Returning to Phase 2/3/4]                      ║
+║                                                                              ║
+║  4. RETURN TO ITERATIVE LOOP                                                 ║
+║     ┌──────────────────────────────────────────────────────────────────┐    ║
+║     │                                                                  │    ║
+║     │  Phase 5 FAILED                                                  │    ║
+║     │      ↓                                                           │    ║
+║     │  Phase 2 - Fix defects + Update affected tests                   │    ║
+║     │      ↓                                                           │    ║
+║     │  Phase 3 - Architect re-review of fixes                          │    ║
+║     │      ↓                                                           │    ║
+║     │  Phase 4 - Rework if architects request changes                  │    ║
+║     │      ↓ (iterate until all architects approve)                    │    ║
+║     │  Phase 5 - Re-run ALL tests                                      │    ║
+║     │      ↓                                                           │    ║
+║     │  IF PASS → Phase 6                                               │    ║
+║     │  IF FAIL → Back to Phase 2 (repeat until all pass)               │    ║
+║     │                                                                  │    ║
+║     └──────────────────────────────────────────────────────────────────┘    ║
+║                                                                              ║
+║  5. DEFECT FIX CYCLE                                                         ║
+║     - Developer fixes defect                                                 ║
+║     - Updates ALL affected tests (UT, INT, API, E2E)                         ║
+║     - Runs ALL local tests - ALL must pass                                   ║
+║     - Submits for architect review                                           ║
+║                                                                              ║
+║  ⚠️  CRITICAL: This cycle repeats until ALL E2E tests pass                   ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
+##### **STATUS UPDATE: Defect Fix Cycle Start**
+```
+- Event: Starting Defect Fix Cycle
+- Iteration: {N}
+- Defects to Fix: {count}
+- Assigned Developers: {list}
+- Timestamp: {now}
+```
+
+##### **STATUS UPDATE: Defect Fix Cycle End**
+```
+- Event: Defect Fix Cycle Complete
+- Iteration: {N}
+- Defects Fixed: {count}
+- Tests Updated: {count}
+- Ready for Re-review: YES
+- Next: Return to Phase 3 Architect Review
+- Timestamp: {now}
+```
+
+---
+
 #### **STATUS UPDATE: Phase 5 Complete**
 ```
 Orchestrator MUST update status.md:
-- Phase 5 Status: {PASSED | FAILED}
+- Phase 5 Status: {✅ PASSED | ⚠️ FAILED}
 - Completion Time: {now}
 - Integration Tests: {passed}/{total}
 - E2E Tests: {passed}/{total}
 - Visual Tests: {passed}/{total}
 - Total Defects Found: {count}
 - Critical Defects: {count}
-- Next: {Phase 6 Final Approval | Return to Dev for Defect Fixes}
+- Defect Fix Iterations: {count} (if any)
+- Next: {Phase 6 Final Approval | Return to Phase 2/3/4 for Defect Fixes}
+```
+
+**If Phase 5 FAILED:**
+```
+⚠️ MANDATORY: Return to Phase 2/3/4 Iterative Loop
+   - Developers fix defects
+   - Update ALL affected tests
+   - Architects re-review
+   - Iterate until approved
+   - Re-run ALL Phase 5 tests
+   - Repeat until ALL tests pass
 ```
 
 ---
@@ -1521,10 +2017,20 @@ The Orchestrator is **SOLELY RESPONSIBLE** for maintaining `docs/project-status/
 | Gate | Requirement | Status Update |
 |------|-------------|---------------|
 | Phase 1 → Phase 2 | All planning artifacts complete | ✅ Phase 1 Complete |
-| Phase 2 → Phase 3 | All unit tests passing (80%+) | ✅ Phase 2 Complete |
-| Phase 3 → Phase 5 | All architects approve | ✅ Review Approved |
-| Phase 5 → Phase 6 | All tests pass | ✅ Testing Complete |
+| Phase 2 → Phase 3 | ALL tests passing (UT 80%+, INT, API, E2E local) | ✅ Phase 2 Complete |
+| Phase 3 → Phase 5 | **ALL architects approve** (iterate until approval) | ✅ Review Approved |
+| Phase 5 → Phase 6 | ALL E2E/tests pass (if fail → back to Phase 2) | ✅ Testing Complete |
 | Phase 6 → Phase 7 | Final approval received | ✅ Wave/Phase Complete |
+
+### Iteration Triggers
+
+| Condition | Action |
+|-----------|--------|
+| ANY architect requests rework | Return to Phase 4 → Phase 3 loop |
+| Phase 4 rework complete | Return to Phase 3 for re-review |
+| ALL architects approve | Exit loop, proceed to Phase 5 |
+| ANY E2E test fails | Return to Phase 2/3/4 loop |
+| ALL E2E tests pass | Proceed to Phase 6 |
 
 ---
 
@@ -1532,16 +2038,62 @@ The Orchestrator is **SOLELY RESPONSIBLE** for maintaining `docs/project-status/
 
 ### One-Line Flow
 ```
-[STATUS: Start] → PO → RE → UI/UX → ARCHITECTS → [STATUS: Phase 1 Done] → DEV → [STATUS: Phase 2 Done] → ARCHITECT REVIEW → [REWORK + STATUS] → [STATUS: Approved] → TESTING → [STATUS: Tests Done] → FINAL APPROVAL → [STATUS: Complete] → NEXT PHASE/WAVE
+[STATUS: Start] → PO → RE → UI/UX → ARCHITECTS → [STATUS: Phase 1 Done]
+    → DEV (Code + UT + INT + API + E2E Tests) → [STATUS: Phase 2 Done]
+    → ARCHITECT REVIEW ←──────────────────────────────────────────────┐
+    → [REWORK + STATUS] ───────────────────────────────────────────────┘
+    → [STATUS: ALL ARCHITECTS APPROVED]
+    → TESTING (Execute E2E, INT, API, Visual)
+    → [IF FAIL → Back to DEV/REVIEW Loop] ←────────────────────────────┐
+    → [IF PASS] → [STATUS: Tests Done]                                 │
+    → FINAL APPROVAL                                                   │
+    → [STATUS: Complete] → NEXT PHASE/WAVE                            │
+                                                                       │
+    ⚠️ E2E FAILURE LOOP: Phase 5 Fail → Phase 2 → Phase 3 → Phase 4 ──┘
 ```
 
 ### Key Principles
 - **Phase-Gated**: No skipping phases
 - **Parallel Development**: Multiple modules simultaneously
-- **Test-Driven**: Unit tests mandatory
-- **Architect-Approved**: Quality enforced by architects
-- **Iterative**: Rework loop until approval
+- **All Tests in Phase 2**: UT, INT, API, E2E tests developed with code
+- **Architect-Approved**: ALL architects must approve before testing
+- **Iterative Per Module**: Phase 2/3/4 loops until all architects approve
+- **E2E Failure Loop**: Failed E2E tests return to Phase 2/3/4 loop
 - **Status-Tracked**: **MANDATORY updates at START and END of EVERY phase, sub-phase, wave, and sub-wave/stream**
+
+### Critical Iterative Loops
+
+```
+LOOP 1: DEVELOPMENT → REVIEW → REWORK (Per Module)
+=========================================================
+┌─────────────────────────────────────────────────────────┐
+│  Phase 2 (Dev + All Tests)                              │
+│      ↓                                                  │
+│  Phase 3 (Architect Review)                             │
+│      ├── ALL APPROVE ──→ EXIT LOOP ──→ Phase 5         │
+│      └── ANY REWORK ───→ Phase 4 ──→ Back to Phase 3   │
+│                                                         │
+│  ITERATE UNTIL ALL ARCHITECTS APPROVE                   │
+└─────────────────────────────────────────────────────────┘
+
+LOOP 2: E2E FAILURE → DEV FIX → RE-TEST
+=========================================================
+┌─────────────────────────────────────────────────────────┐
+│  Phase 5 (E2E/Testing)                                  │
+│      ├── ALL PASS ──→ Phase 6 (Final Approval)         │
+│      └── ANY FAIL ───→ Defect Report                    │
+│              ↓                                          │
+│          Phase 2 (Fix + Update Tests)                   │
+│              ↓                                          │
+│          Phase 3 (Architect Review)                     │
+│              ↓                                          │
+│          Phase 4 (Rework if needed)                     │
+│              ↓                                          │
+│          Back to Phase 5 (Re-run ALL tests)             │
+│                                                         │
+│  ITERATE UNTIL ALL E2E TESTS PASS                       │
+└─────────────────────────────────────────────────────────┘
+```
 
 ### Complete Status Update Matrix
 
@@ -1557,6 +2109,8 @@ The Orchestrator is **SOLELY RESPONSIBLE** for maintaining `docs/project-status/
 | **SUB-WAVE/STREAM** | Stream End | After stream completes | Module done, tests, coverage, files |
 | **REWORK** | Rework Iteration Start | When rework cycle begins | Iteration number, issues to fix |
 | **REWORK** | Rework Iteration End | When rework submitted | Issues fixed, tests updated |
+| **E2E FAILURE** | Defect Found | When E2E test fails | Defect ID, severity, assigned developer |
+| **E2E FAILURE** | Defect Fixed | When defect fixed | Fix details, tests updated, ready for re-test |
 | **BLOCKER** | Blocker Found | When blocker identified | Blocker ID, description, impact, owner |
 | **BLOCKER** | Blocker Resolved | When blocker cleared | Resolution, blocked duration |
 
@@ -1565,12 +2119,22 @@ The Orchestrator is **SOLELY RESPONSIBLE** for maintaining `docs/project-status/
 | Phase | Sub-Phases |
 |-------|------------|
 | Phase 1 | 1.1 PO, 1.2 RE, 1.3 UX, 1.4 Architects |
-| Phase 2 | Wave N: Stream 1-4 (parallel development) |
+| Phase 2 | 2.1 Code, 2.2 UT Dev, 2.3 INT Dev, 2.4 API Dev, 2.5 E2E Dev, 2.6 Run All Tests |
 | Phase 3 | 3.1 FS Review, 3.2 BE Review, 3.3 AI/ML Review, 3.4 Consolidated |
 | Phase 4 | 4.1 Issue Analysis, 4.2 Parallel Rework, 4.3 Verification |
-| Phase 5 | 5.1 QA (2 streams), 5.2 E2E (2 streams), 5.3 Visual (2 streams), 5.4 Consolidation |
+| Phase 5 | 5.1 QA (INT+API), 5.2 E2E Execution, 5.3 Visual, 5.4 Consolidation, 5.5 Failure Handling |
 | Phase 6 | 6.1 Lead Architect, 6.2 QA Lead, 6.3 Final Sign-Off |
 | Phase 7 | 7.1 Completion Summary, 7.2 Next Planning, 7.3 Kickoff |
+
+### Test Types by Phase
+
+| Test Type | Developed In | Executed In |
+|-----------|--------------|-------------|
+| Unit Tests (UT) | Phase 2.2 | Phase 2.6 (local), Phase 5.1 |
+| Integration Tests (INT) | Phase 2.3 | Phase 2.6 (local), Phase 5.1 |
+| API Tests | Phase 2.4 | Phase 2.6 (local), Phase 5.1 |
+| E2E Tests | Phase 2.5 | Phase 2.6 (local), Phase 5.2 |
+| Visual Tests | Phase 5.3 | Phase 5.3 |
 
 ### Status File Location
 ```
