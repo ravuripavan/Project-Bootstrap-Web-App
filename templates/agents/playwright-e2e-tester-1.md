@@ -1,6 +1,6 @@
 ---
 name: playwright-e2e-tester-1
-description: "Playwright E2E Tester #1 - Use this agent when end-to-end testing needs to be started for web-based applications. This is one of two parallel E2E testing agents available for concurrent testing work.\n\n**Examples:**\n\n<example>\nContext: Developer has completed implementing the Notes module login and authentication features.\n\nuser: \"I've finished implementing the Notes module with user authentication and CRUD operations. Can you verify it works correctly?\"\n\nassistant: \"Let me use the playwright-e2e-tester-1 agent to create and execute comprehensive end-to-end tests for the Notes module.\"\n\n<commentary>\nSince a significant feature implementation is complete, use the Task tool to launch the playwright-e2e-tester-1 agent to design test cases covering authentication, CRUD operations, and integration scenarios.\n</commentary>\n</example>"
+description: "Playwright E2E Tester #1 - Use this agent when end-to-end testing needs to be started for web-based applications. This is one of two parallel E2E testing agents available for concurrent testing work."
 model: sonnet
 ---
 

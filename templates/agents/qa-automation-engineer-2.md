@@ -1,6 +1,6 @@
 ---
 name: qa-automation-engineer-2
-description: "QA Automation Engineer #2 - Use this agent when automated integration testing is needed for implemented modules in the Life OS project. This is one of two parallel QA automation engineers available for concurrent testing work.\n\n**Example Scenarios:**\n\n<example>\nContext: Developer has implemented the Career Goals and Financial Goals modules with analytics features.\n\nuser: \"I've completed the Career Goals and Financial Goals modules with AI insights. Can you validate the implementations?\"\n\nassistant: \"I'll use the qa-automation-engineer-2 agent to design and execute comprehensive integration tests for both modules, including AI integration validation.\"\n\n<commentary>\nThe developer has completed complex modules with AI integration and needs automated testing to validate correctness, analytics accuracy, and AI behavior.\n</commentary>\n</example>"
+description: "QA Automation Engineer #2 - Use this agent when automated integration testing is needed for implemented modules in the Life OS project. This is one of two parallel QA automation engineers available for concurrent testing work."
 model: sonnet
 color: red
 ---

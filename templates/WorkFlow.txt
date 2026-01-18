@@ -1,647 +1,1523 @@
-Absolutely, Pavan — here is the **full Life OS multi‑agent workflow written cleanly as text**, without diagrams, without formatting noise — just a clear, readable, step‑by‑step workflow you can plug into any system.
+# MULTI-AGENT DEVELOPMENT WORKFLOW
 
----
-
-# **LIFE OS — MULTI‑AGENT WORKFLOW (TEXT VERSION)**
-
-## **PARALLEL DEVELOPMENT STRATEGY**
-
-**Life OS supports parallel development execution** to accelerate delivery while maintaining quality:
-
-### **Parallel Execution Principles**
-1. **Module Independence**: Each feature module (Notes, Reminders, Career, Financial, Property, Health, AI Assistant, Dashboard) designed for independent development
-2. **Concurrent Agent Instances**: Multiple developer and tester agents work simultaneously on different modules
-3. **Orchestrator Coordination**: Central orchestrator manages parallel workstreams, tracks dependencies, prevents conflicts
-4. **Dependency Graph**: Orchestrator maintains module dependency graph to determine safe parallel execution paths
-5. **Shared Component Coordination**: Common elements (Design System, API Gateway, Auth) developed first or coordinated to avoid conflicts
-
-### **When Parallelization Occurs**
-- **Phase 2 (Development)**: Multiple modules developed concurrently by different developer agents
-- **Phase 3 (Architect Review)**: Architects can review multiple modules in parallel
-- **Phase 5 (Testing)**: Multiple modules tested concurrently with parallel test execution
-- **Phase 6 (Re-Review)**: Parallel re-review of multiple fixed modules
-
-### **Orchestrator Parallel Coordination Responsibilities**
-- Analyze module dependencies and create parallel execution plan
-- Launch multiple developer/tester agent instances for independent modules
-- Collect and aggregate results from parallel workstreams
-- Ensure dependent modules wait for prerequisites
-- Manage merge conflicts and integration points
-- Track overall progress across all parallel tracks
-
-### **Agent Clone Inventory for Parallel Execution**
-
-**Development Agents (8 total)**:
-- **Full-Stack Developers**: 4 clones
-  - fullstack-developer-1, fullstack-developer-2, fullstack-developer-3, fullstack-developer-4
-  - Capability: Up to 4 modules developed simultaneously
-  - Specialization: Web, mobile, desktop cross-platform implementation
-
-- **ML/AI Developers**: 4 clones
-  - ml-ai-developer-1, ml-ai-developer-2, ml-ai-developer-3, ml-ai-developer-4
-  - Capability: Up to 4 AI components developed simultaneously
-  - Specialization: RAG, embeddings, LLM interaction, orchestration
-
-**Testing Agents (7 total)**:
-- **QA Automation Engineers**: 2 clones
-  - qa-automation-engineer-1, qa-automation-engineer-2
-  - Capability: Up to 2 modules tested simultaneously (integration + API)
-
-- **Playwright E2E Testers**: 3 agents (1 original + 2 clones)
-  - playwright-e2e-tester, playwright-e2e-tester-1, playwright-e2e-tester-2
-  - Capability: Up to 3 modules E2E tested simultaneously
-  - Cross-browser: Chromium, Firefox, WebKit
-
-- **Visual Automation Testers**: 2 clones
-  - visual-automation-tester-1, visual-automation-tester-2
-  - Capability: Up to 2 modules visually tested simultaneously
-  - Screenshot comparison across web, mobile, desktop
-
-**Maximum Concurrent Workstreams**:
-- **Phase 2 (Development)**: 4 feature modules + 4 AI components = 8 parallel development tracks
-- **Phase 5 (Testing)**: 2 integration tests + 3 E2E tests + 2 visual tests = 7 parallel testing tracks
-- **Total System Capacity**: Up to 8 development + 7 testing = 15 parallel workstreams
-
-**Coordination Mechanism**:
-- Orchestrator maintains **Module Assignment Matrix** showing which clone is working on which module
-- **Dependency Graph** ensures proper sequencing (e.g., Dashboard waits for module APIs)
-- **Conflict Prevention**: Shared components locked during modification, coordinated merge strategy
-- **Progress Tracking**: Real-time status dashboard showing all parallel workstreams
-- **Load Balancing**: Orchestrator assigns new modules to available (idle) clones dynamically
-
----
-
-## **PHASE 1 — PLANNING & DESIGN**
-
-### **CRITICAL: Pre-Work Requirements (MANDATORY)**
-
-**BEFORE any agent begins Phase 1 work, the following MUST be completed:**
-
-1. **Read ALL Existing Documentation**
-   - **Orchestrator MUST**:
-     - Search for and read all existing documentation related to the module being planned/updated
-     - Identify existing file naming conventions (e.g., `06-UserStories-FinancialGoals.md`)
-     - Locate existing user stories, requirements, UX designs, and architecture documents
-     - Provide agents with complete context of existing work
-
-   - **Product Owner MUST**:
-     - Read existing user story documents (e.g., `docs/product/06-UserStories-FinancialGoals.md`)
-     - Understand current user story numbering (e.g., US-F-001, US-F-002, etc.)
-     - Review existing module structure and organization
-     - Identify what needs updating vs. creating new
-
-   - **Requirements Engineer MUST**:
-     - Read existing requirements documents
-     - Understand current requirement IDs and numbering
-     - Review existing data models and API specifications
-
-   - **UX Designer MUST**:
-     - Read existing UX designs, wireframes, and interaction patterns
-     - Understand current design system and component library
-     - Review existing user flows
-
-   - **Architects MUST**:
-     - Read existing architecture documents
-     - Understand current system design and integration points
-     - Review existing technical decisions and constraints
-
-2. **Follow Existing File Naming Conventions**
-   - **NEVER** create new files if existing files serve the same purpose
-   - **ALWAYS** follow established naming patterns:
-     - User Stories: `XX-UserStories-ModuleName.md` (e.g., `06-UserStories-FinancialGoals.md`)
-     - Requirements: `XX-Requirements-ModuleName.md`
-     - UX Design: `XX-UXDesign-ModuleName.md`
-     - Architecture: `XX-Architecture-ModuleName.md`
-   - **MAINTAIN** existing numbering schemes (user story IDs, requirement IDs, etc.)
-
-3. **Update Existing Structure - DO NOT Create Duplicates**
-   - **UPDATE** existing documents rather than creating new ones
-   - **PRESERVE** existing IDs, numbering, and references
-   - **MAINTAIN** traceability across documents
-   - **ONLY** create new documents if genuinely new modules/features that don't have existing documentation
-
-4. **"EMBED NOT ADD-ON" PRINCIPLE (CRITICAL FOR ALL PHASE 1 ITERATIONS)**
-
-   **APPLIES TO**: Product Owner, Requirements Engineer, UX Designer, ALL Architects
-
-   **RULE**: New features/epics MUST be embedded into existing module documentation, NOT created as separate add-on files.
-
-   **Examples**:
-
-   **✅ CORRECT (Embed)**:
-   - Epic 6 added to Property Goals → UPDATE existing `10-PropertyAI.md` to add Component 6
-   - New requirements for existing module → UPDATE existing `05-FunctionalRequirements-PropertyGoals.md`
-   - New UX flows for existing module → UPDATE existing `05-UserFlows-PropertySearch.md`
-   - New architecture for existing module → UPDATE existing architecture documents (02-FrontendArchitecture.md, 04-BackendArchitecture.md, 10-PropertyAI.md)
-
-   **❌ WRONG (Add-On)**:
-   - Creating `17-Architecture-SourceTransparency.md` as separate file
-   - Creating `13-UXDesign-SourceTransparency.md` as separate file
-   - Creating new architecture files with `-SourceTransparency` suffix
-   - Creating "Part 2", "Part 3" files instead of integrating into existing document
-
-   **WHY THIS MATTERS**:
-   - Prevents fragmented architecture (single source of truth)
-   - Maintains continuity (Epic 1-5 → Epic 6, Component 1-5 → Component 6)
-   - Easier to maintain and understand
-   - Avoids redundant documentation
-
-   **ARCHITECT-SPECIFIC ENFORCEMENT**:
-   - **Full-Stack Architect**: Embed new frontend components into `02-FrontendArchitecture.md`
-   - **Backend Architect**: Embed new services/APIs into `04-BackendArchitecture.md`
-   - **AI/ML Architect**: Embed new AI components into module-specific AI architecture (e.g., `10-PropertyAI.md`)
-   - Continue component/section numbering from existing (don't restart at 1)
-   - Add new sections to existing Table of Contents
-   - Increment document version (1.0 → 1.1)
-
-   **WHEN TO CREATE NEW FILES**:
-   - Only for genuinely NEW modules (e.g., Financial Assistant as Module 16)
-   - Only if no existing documentation exists for the module
-   - Must follow established naming conventions (XX-DocumentType-ModuleName.md)
-
-5. **Orchestrator Enforcement**
-   - Orchestrator MUST verify agents have read existing documentation before approving work
-   - Orchestrator MUST reject work that creates duplicate files or ignores existing conventions
-   - Orchestrator MUST ensure consistency with existing project structure
-   - **Orchestrator MUST reject add-on files**: Any file with suffixes like `-SourceTransparency`, `-NewFeature`, etc. that should be embedded into existing docs
-   - **Orchestrator MUST verify "embed not add-on"**: Check that new features are integrated into existing documents, not created as separate files
-
-**VIOLATION CONSEQUENCES**:
-- Work that ignores existing documentation will be REJECTED
-- Duplicate files will be flagged and must be corrected
-- Add-on files that should be embedded will be REJECTED
-- Agents must restart Phase 1 work with proper context
-- Architects creating add-on architecture files must re-do work by integrating into existing architecture
-
----
-
-### **Phase 1 Agent Workflow**
-
-1. **Product Owner**
-   - **FIRST**: Read all existing user story documents for the module
-   - **THEN**: Defines the vision, scope, goals, and feature list for the module
-   - **UPDATE** existing user stories OR create new ones following existing conventions
-   - Produces user stories and acceptance criteria
-   - **For Financial Goals Module**: May consult finance-meta-controller to ensure financial planning features are comprehensive and aligned with industry best practices
-
-2. **Requirements Engineer**
-   - **FIRST**: Read all existing requirements documents for the module
-   - **THEN**: Converts PO output into clear, complete, testable requirements
-   - **UPDATE** existing requirements OR create new ones following existing conventions
-   - Defines functional requirements, non‑functional requirements, data requirements, and integration requirements
-   - **For Financial Goals Module**: May consult finance-meta-controller to validate financial calculations, forecasting algorithms, and domain-specific requirements
-
-3. **Financial Planning Agents (Domain Experts for Financial Goals Module)**
-   - **When to Invoke**: During Financial Goals module planning, when users request financial advice features, or when financial calculations/recommendations need domain expertise
-   - **Coordination**: finance-meta-controller orchestrates all financial agents based on user needs
-
-   **Financial Agent Roster**:
-   - **financial-planner-advisor**: Comprehensive financial planning, goal setting, retirement planning, wealth building strategies
-   - **budgeting-analyzer**: Budget analysis, cash flow optimization, expense tracking, spending pattern analysis
-   - **investment-strategy-advisor**: Investment strategy frameworks, portfolio allocation principles, risk-aligned investing, retirement planning strategies
-   - **risk-insurance-advisor**: Risk assessment, insurance needs analysis, protection planning, coverage gap identification
-   - **forecasting-simulation-agent**: Financial forecasting, scenario analysis, Monte Carlo simulations, future projections
-   - **debt-optimization-advisor**: Debt management strategies, repayment prioritization (avalanche/snowball), interest optimization
-   - **finance-meta-controller**: Coordinates all financial agents, routes user queries to appropriate specialists, ensures comprehensive financial guidance
-
-   **Integration with Workflow**:
-   - Product Owner invokes finance-meta-controller when defining Financial Goals features
-   - Requirements Engineer consults financial agents to validate calculation requirements and domain logic
-   - Financial agents provide domain expertise, NOT implementation code (architects/developers handle implementation)
-   - Output: Financial planning frameworks, calculation formulas, domain-specific acceptance criteria
-
-4. **UX Designer**
-   - **FIRST**: Read all existing UX design documents for the module
-   - **THEN**: Creates user flows, wireframes, interaction patterns, and information architecture
-   - **UPDATE** existing UX designs (EMBED new flows/wireframes into existing document)
-   - **DO NOT** create separate "-FeatureName.md" files
-   - Continue user flow numbering from existing (if existing has Flow 1-5, add Flow 6+)
-   - Continue wireframe numbering from existing (if existing has Wireframe 1-5, add Wireframe 6+)
-   - Ensures clarity, simplicity, and consistency across platforms
-   - **For Financial Goals Module**: May review financial agent recommendations to design appropriate financial data input/output screens, charts, and dashboards
-
-5. **Architects (Full‑Stack, Backend, AI/ML)**
-   - **FIRST**: Read all existing architecture documents for the module
-   - **THEN**: Review PO + Requirements + UX outputs
-   - **UPDATE** existing architecture (EMBED new components/services into existing documents)
-   - **DO NOT** create separate architecture files with feature suffixes (e.g., `-SourceTransparency.md`)
-   - **Full-Stack Architect**: Add new frontend components to `02-FrontendArchitecture.md` under module-specific section
-   - **Backend Architect**: Add new backend services/APIs/tables to `04-BackendArchitecture.md` under module-specific section
-   - **AI/ML Architect**: Add new AI components to module-specific AI architecture (e.g., continue Component numbering in `10-PropertyAI.md`)
-   - Continue component/section numbering from existing (don't restart numbering)
-   - Increment document version (e.g., 1.0 → 1.1)
-   - Validate feasibility, identify dependencies, and define constraints
-   - **For Financial Goals Module**: Review financial calculation requirements from financial agents and design appropriate backend services, APIs, and data models to support financial planning features
-
-6. **Orchestrator Review**
-   - **VERIFY** agents have read existing documentation before starting work
-   - **CHECK** that existing file naming conventions were followed
-   - **ENSURE** existing documents were updated (not duplicated)
-   - **VALIDATE** that existing IDs and numbering schemes were preserved
-   - Ensures all planning artifacts are complete and consistent
-   - If anything is missing or unclear, sends it back to the responsible agent for rework
-   - **REJECT** work that violates pre-work requirements (duplicate files, ignored conventions, missing context)
-   - Once approved, moves the workflow to Development
-
-### **Financial Agent Workflow (Detailed)**
-
-When the finance-meta-controller is invoked (by Product Owner, Requirements Engineer, or directly by user for Financial Goals features):
+## WORKFLOW OVERVIEW
 
 ```
-User Request
+ORCHESTRATION FLOW:
+==================
+
+[STATUS UPDATE: Phase Start] ←── MANDATORY
     ↓
-Finance Meta-Controller (Intent Detection + Routing)
+PO (Product Owner)
     ↓
-Financial Planner & Advisor (Core Analysis)
+RE (Requirements Engineer)
     ↓
-Meta-Controller Routes to Specialized Agents (Conditional):
-    - If cash flow unclear → Budgeting Agent
-    - If investment goals exist → Investment Strategy Agent
-    - If dependents/liabilities → Risk & Insurance Agent
-    - If long-term goals → Forecasting & Simulation Agent
-    - If debt significant → Debt Optimization Agent
+UI/UX Designer
     ↓
-All Agents Return to Meta-Controller
+ARCHITECTS (Full-Stack, Backend, AI/ML)
     ↓
-Review Loops:
-    1. Completeness Check (all financial aspects addressed?)
-    2. Consistency Check (recommendations aligned?)
-    3. Risk Check (appropriate risk assessment?)
-    4. Clarity Check (actionable guidance?)
+[STATUS UPDATE: Phase 1 Complete] ←── MANDATORY
     ↓
-Meta-Controller Synthesis (Unified Financial Plan)
+DEV (Parallel Development + UNIT TESTS)
     ↓
-Final Structured Output:
-    - Summary
-    - Priority Actions
-    - Long-Term Strategy
-    - Scenarios (optimistic, baseline, pessimistic)
-    - Risks & Mitigation
+[STATUS UPDATE: Phase 2 Complete] ←── MANDATORY
+    ↓
+ARCHITECT REVIEW
+    ↓
+REWORK IF REQUIRED ←─────────────┐
+    ↓                            │
+[STATUS UPDATE: Rework Cycle]    │
+    ↓                            │
+ITERATE LOOP ────────────────────┘
+(Until ALL Architects Approve)
+    ↓
+[STATUS UPDATE: Review Complete] ←── MANDATORY
+    ↓
+TESTING
+    ↓
+[STATUS UPDATE: Testing Complete] ←── MANDATORY
+    ↓
+FINAL APPROVAL
+    ↓
+[STATUS UPDATE: Phase/Wave Complete] ←── MANDATORY
+    ↓
+NEXT PHASE/WAVE
 ```
 
-**Key Principles**:
-- **finance-meta-controller** is the ONLY entry point for financial planning features
-- Specialized agents are invoked CONDITIONALLY based on user needs (not all agents run for every request)
-- All agents return structured data to meta-controller for synthesis
-- Meta-controller ensures completeness, consistency, risk assessment, and clarity
-- Output is actionable, prioritized, and scenario-based
-
-**When Financial Agents Are NOT Used**:
-- For non-financial modules (Notes, Reminders, Career Goals, Property Goals, Health Goals, AI Assistant)
-- For implementation/coding tasks (financial agents provide domain expertise, NOT code)
-- For UI/UX design (UX Designer handles financial UI screens based on agent recommendations)
-
 ---
 
-## **PHASE 2 — DEVELOPMENT (PARALLEL EXECUTION ENABLED)**
-
-6. **Developers (Full‑Stack + ML/AI) — PARALLEL DEVELOPMENT**
-
-   **Available Developer Agent Clones**:
-   - **Full-Stack Developers**: 4 parallel agents (fullstack-developer-1, -2, -3, -4)
-     - Developer #1: Recommended for Notes, Reminders modules
-     - Developer #2: Recommended for Career Goals, Financial Goals modules
-     - Developer #3: Recommended for Property Goals, Health Goals modules
-     - Developer #4: Recommended for Dashboard & Analytics module
-
-   - **ML/AI Developers**: 4 parallel agents (ml-ai-developer-1, -2, -3, -4)
-     - Developer #1: Recommended for RAG pipeline, personalization engine
-     - Developer #2: Recommended for LLM interaction layer, context management
-     - Developer #3: Recommended for Embedding pipeline, vector search
-     - Developer #4: Recommended for Multi-agent orchestration, pattern learning
-
-   **Parallel Development Strategy**:
-   - **Module Independence**: Each module (Notes, Reminders, Career, Financial, Property, Health, AI Assistant, Dashboard) can be developed in parallel if dependencies allow
-   - **Concurrent Execution**: Up to 4 feature modules can be developed simultaneously by different full-stack developer agents
-   - **AI Component Parallelization**: Up to 4 AI/ML components can be developed concurrently by different ML/AI developer agents
-   - **Orchestrator Coordination**: Orchestrator assigns independent modules to different developer instances and tracks progress
-   - **Dependency Management**: Orchestrator ensures dependent modules wait for prerequisite completions
-   - **Shared Resources**: Common components (Design System, API Layer, Database Schema) developed first or coordinated across parallel tracks
-
-   **Development Execution**:
-   - Implement the feature according to requirements, UX, and architecture
-   - Produce implementation plans, API integrations, data models, and code‑level outlines
-   - Submit the implementation for review
-   - All clones coordinate through orchestrator to avoid conflicts
-
-   **CRITICAL: Unit Testing Requirement (MANDATORY)**
-
-   **Developers MUST write and execute unit tests BEFORE declaring development complete:**
-
-   1. **Write Unit Tests**:
-      - Create comprehensive unit tests for ALL new code (services, repositories, schemas, utilities)
-      - Test coverage must include: happy paths, edge cases, error handling, boundary conditions
-      - Follow existing test patterns in `apps/api/tests/unit/`
-      - Use pytest with async support for async code
-
-   2. **Execute Tests Locally**:
-      - Run `pytest tests/unit/ -v --tb=short` and verify ALL tests pass
-      - Fix any failing tests before proceeding
-      - Ensure no regressions in existing tests
-
-   3. **Test Documentation**:
-      - Tests must be well-documented with clear docstrings
-      - Test names must clearly describe what is being tested
-
-   4. **Commit Requirements**:
-      - **NEVER** commit code without corresponding unit tests
-      - **NEVER** commit code with failing tests
-      - Include test files in the same commit as the implementation
-
-   **VIOLATION CONSEQUENCES**:
-   - Code submitted without unit tests → REJECTED by Orchestrator
-   - Code with failing tests → REJECTED, developer must fix before re-submission
-   - Development is NOT complete until all unit tests pass
-   - Orchestrator MUST verify test execution before approving Phase 2 completion
-
-   **Parallel Development Rules**:
-   - **Maximum Parallelization**: Up to 4 independent modules can proceed simultaneously with full-stack developers
-   - **AI/ML Parallelization**: Up to 4 independent AI components can proceed simultaneously with ML/AI developers
-   - **Dependent Modules Wait**: Dashboard waits for module APIs, AI Assistant waits for RAG pipeline, etc.
-   - **Full-Stack ↔ ML/AI Coordination**: Full-Stack and ML/AI developers work in parallel on their respective domains with orchestrator managing integration points
-   - **Shared Component Coordination**: Orchestrator ensures shared architecture components developed first or coordinated to avoid merge conflicts
-   - **Clone Assignment**: Orchestrator intelligently assigns modules to available developer clones based on workload and expertise
-
----
-
-## **PHASE 3 — ARCHITECT REVIEW (ROUND 1)**
-
-7. **All Architects review the implementation**
-   - Full‑Stack Architect checks frontend, backend integration, and cross‑platform behavior.
-   - Backend Architect checks APIs, services, data models, and backend logic.
-   - AI/ML Architect checks AI assistant behavior, RAG, embeddings, and model integration.
-
-8. **Architect Review Result**
-   - If approved → move to Testing.
-   - If rework is required → return to Developers with detailed feedback.
-
----
-
-## **PHASE 4 — DEVELOPER REWORK (IF NEEDED)**
-
-9. **Developers**
-   - Fix issues identified by architects.
-   - Update implementation and resubmit for review.
-
-10. **Orchestrator**
-   - Sends the updated implementation back to Architects.
-   - Loop continues until architects approve.
-
----
-
-## **PHASE 5 — TESTING (PARALLEL EXECUTION ENABLED)**
-
-11. **QA Automation Engineer — PARALLEL INTEGRATION TESTING**
-
-   **Available QA Automation Agent Clones**:
-   - **qa-automation-engineer-1**: Recommended for Notes, Reminders, API endpoints
-   - **qa-automation-engineer-2**: Recommended for Goals modules, AI features, analytics
-
-   **Parallel Testing Execution**:
-   - Runs automated integration tests, API tests, functional tests, and regression tests
-   - **Parallel Testing**: Multiple modules tested concurrently by different QA agent instances
-   - **Module-Level Tests**: Each module's test suite runs independently in parallel
-   - **Integration Tests**: Cross-module integration tests run after individual module tests pass
-   - **Maximum Parallelization**: Up to 2 independent module test suites can run simultaneously
-
-12. **Playwright E2E Tester — PARALLEL WEB TESTING**
-
-   **Available Playwright E2E Agent Clones**:
-   - **playwright-e2e-tester**: Original web E2E testing agent
-   - **playwright-e2e-tester-1**: Parallel E2E for Notes, Authentication modules
-   - **playwright-e2e-tester-2**: Parallel E2E for Reminders, Goals modules
-
-   **Parallel E2E Execution**:
-   - Runs end-to-end tests for web applications using Playwright framework
-   - **Cross-Browser Testing**: Tests run across Chromium, Firefox, WebKit in parallel
-   - **Module Parallelization**: Up to 3 independent modules can be E2E tested simultaneously
-   - **Test Isolation**: Each clone maintains independent test execution context
-
-13. **Automation Tester (Screenshot‑Driven) — PARALLEL VISUAL TESTING**
-
-   **Available Visual Automation Agent Clones**:
-   - **visual-automation-tester-1**: Screenshot testing for Notes, Career Goals, dashboards
-   - **visual-automation-tester-2**: Screenshot testing for Financial Goals, Health Goals, charts
-
-   **Parallel Visual Testing Execution**:
-   - Runs visual regression tests, screenshot comparisons, and UI behavior validation across platforms
-   - **Parallel Visual Testing**: Multiple modules tested visually in parallel across web, mobile, desktop
-   - **Cross-Platform Parallel**: Each platform tested simultaneously for faster feedback
-   - **Maximum Parallelization**: Up to 2 independent modules can be visually tested simultaneously
-   - **Screenshot Baseline Management**: Each clone maintains separate baseline sets to avoid conflicts
-
-14. **Testing Result**
-   - **Parallel Test Aggregation**: Orchestrator collects results from all parallel test streams (QA + E2E + Visual)
-   - **Consolidated Report**: All test results aggregated into single comprehensive test report
-   - **Pass Criteria**: ALL test types (integration + E2E + visual) must pass for approval
-   - If tests pass → move to Architect Re‑Review
-   - If tests fail → return to Developers for fixes with detailed test reports from all parallel streams
-
----
-
-## **PHASE 6 — ARCHITECT RE‑REVIEW**
-
-14. **Architects**
-   - Validate fixes, ensure no regressions, confirm architecture integrity, and verify AI behavior stability.
-
-15. **Re‑Review Result**
-   - If approved → move to Final Approval.
-   - If more fixes are needed → return to Developers.
-
----
-
-## **PHASE 7 — FINAL APPROVAL**
-
-16. **Lead Architect + QA Lead**
-   - Perform final sign‑off.
-   - Confirm requirements met, UX preserved, architecture respected, AI behavior safe, and no open defects.
-
-17. **Orchestrator**
-   - Validates all criteria and marks the module as complete.
-
----
-
-## **PHASE 8 — NEXT PHASE**
-
-18. **Orchestrator**
-   - Triggers the next module, sprint, or feature set.
-   - Ensures dependencies are satisfied before starting the next cycle.
-
----
-
----
-
-## **MANDATORY: PROJECT STATUS UPDATE AFTER EVERY PHASE**
-
-**CRITICAL REQUIREMENT**: The Orchestrator MUST update project status files after completing EACH phase.
-
-### **Status Update Locations**
-1. `docs/project-status/module-tracking.md` - Module-level status tracking
-2. `docs/project-status/phase-completion.md` - Phase completion records
-
-### **When to Update**
-
-| After Phase | Update Required |
-|-------------|-----------------|
-| Phase 0 (Foundation) | Infrastructure components completed, files created |
-| Phase 1 (Planning) | Module status → "Phase 1 Complete", deliverables listed |
-| Phase 2 (Development) | Module status → "In Development", assigned developers |
-| Phase 3 (Architect Review) | Review result (Approved/Rework), feedback summary |
-| Phase 4 (Rework) | Issues fixed, resubmission status |
-| Phase 5 (Testing) | Test results (Pass/Fail), defect counts |
-| Phase 6 (Re-Review) | Re-review result, regression check |
-| Phase 7 (Final Approval) | Module status → "Complete", sign-off recorded |
-| Phase 8 (Next Phase) | Next sprint/module triggered, dependencies updated |
-
-### **What to Update**
-
-**module-tracking.md**:
-- Module status column
-- Current phase column
-- Last updated date
-- Any blockers or dependencies
-
-**phase-completion.md**:
-- Phase completion record with date
-- Deliverables produced
-- Quality gates passed/failed
-- Commits and file counts
-- Next steps
-
-### **Orchestrator Enforcement**
-- Orchestrator MUST NOT proceed to next phase until status is updated
-- Status updates must be committed and pushed to repository
-- Missing status updates = workflow violation
-
----
-
-# **SUMMARY**
-
-## **Sequential Flow (One-Line Version)**
-PO → Requirements → UX → Architecture → Development → Architect Review → Developer Rework → Testing → Architect Re‑Review → Final Approval → **Status Update** → Next Phase
-
-## **Parallel Execution Model**
-- **Phase 1**: Sequential (all modules planned together)
-- **Phase 2**: **PARALLEL** - Multiple modules developed simultaneously
-- **Phase 3**: **PARALLEL** - Multiple modules reviewed simultaneously
-- **Phase 4**: **PARALLEL** - Multiple modules reworked simultaneously
-- **Phase 5**: **PARALLEL** - Multiple modules tested simultaneously
-- **Phase 6**: **PARALLEL** - Multiple modules re-reviewed simultaneously
-- **Phase 7**: Sequential (final approval for all completed modules)
-- **Phase 8**: Triggers next sprint with new parallel workstreams
-
-## **Key Benefits of Parallel Execution**
-- **Faster Time to Market**: Multiple modules progress simultaneously
-- **Resource Optimization**: Multiple agent instances utilized concurrently
-- **Risk Mitigation**: Issues in one module don't block progress on others
-- **Scalability**: Workflow scales with module count without linear time increase
-
----
-
-## **JIRA PROJECT TRACKING**
-
-### **JIRA Workspace**
-- **URL**: https://ravuripavan.atlassian.net/jira/software/projects/PT/boards/4
-- **Project Key**: PT (Personal Tracker)
-- **Board Type**: Kanban
-
-### **Epic Structure**
-
-**Master Project Plan**:
-- [PT-157](https://ravuripavan.atlassian.net/browse/PT-157) - LIFE OS Complete Project Plan (72 Weeks)
-
-**Phase Epics**:
-| Issue | Phase | Status |
-|-------|-------|--------|
-| [PT-158](https://ravuripavan.atlassian.net/browse/PT-158) | Phase 0: Foundation | COMPLETE |
-| [PT-159](https://ravuripavan.atlassian.net/browse/PT-159) | Phase 1: MVP Core | COMPLETE |
-| [PT-1](https://ravuripavan.atlassian.net/browse/PT-1) | Phase 2: Goal Modules | IN PROGRESS |
-| [PT-160](https://ravuripavan.atlassian.net/browse/PT-160) | Phase 3: Property & AI Tasks | PLANNED |
-| [PT-161](https://ravuripavan.atlassian.net/browse/PT-161) | Phase 4: Advanced AI | PLANNED |
-| [PT-162](https://ravuripavan.atlassian.net/browse/PT-162) | Phase 5: Enterprise | FUTURE |
-
-**MVP Track 2 Sprint Epics**:
-| Issue | Sprint | Duration | Module |
-|-------|--------|----------|--------|
-| [PT-163](https://ravuripavan.atlassian.net/browse/PT-163) | Sprint 1 | 2 weeks | Career Goals |
-| [PT-164](https://ravuripavan.atlassian.net/browse/PT-164) | Sprint 2 | 3 weeks | Financial Goals + Assistant |
-| [PT-165](https://ravuripavan.atlassian.net/browse/PT-165) | Sprint 3 | 2 weeks | Health Goals |
-| [PT-166](https://ravuripavan.atlassian.net/browse/PT-166) | Sprint 4 | 3 weeks | Property Goals |
-
-**Module Epics**:
-- **Career Goals**: [PT-2](https://ravuripavan.atlassian.net/browse/PT-2), [PT-3](https://ravuripavan.atlassian.net/browse/PT-3), [PT-4](https://ravuripavan.atlassian.net/browse/PT-4)
-- **Health Goals**: [PT-29](https://ravuripavan.atlassian.net/browse/PT-29) to [PT-34](https://ravuripavan.atlassian.net/browse/PT-34)
-- **Financial Goals**: [PT-75](https://ravuripavan.atlassian.net/browse/PT-75) to [PT-78](https://ravuripavan.atlassian.net/browse/PT-78)
-- **Financial Assistant**: [PT-110](https://ravuripavan.atlassian.net/browse/PT-110) to [PT-114](https://ravuripavan.atlassian.net/browse/PT-114)
-- **AI-Powered Tasks**: [PT-127](https://ravuripavan.atlassian.net/browse/PT-127) to [PT-131](https://ravuripavan.atlassian.net/browse/PT-131)
-
-**Supporting Epics**:
-- [PT-167](https://ravuripavan.atlassian.net/browse/PT-167) - Deployment Preparation
-- [PT-168](https://ravuripavan.atlassian.net/browse/PT-168) - Technical Debt
-
-### **JIRA Status Updates (Mandatory)**
-
-The Orchestrator MUST update JIRA status at each workflow phase transition:
-
-| Workflow Phase | JIRA Action |
-|----------------|-------------|
-| Phase 1 Start | Create Epic/Stories if not exist |
-| Phase 2 Start | Transition Epic → "In Progress", add comment with agent assignments |
-| Phase 2 Complete | Add comment with deliverables, test counts |
-| Phase 3 Review | Add comment with architect review status |
-| Phase 4 Rework | Add comment with defects and fixes |
-| Phase 5 Testing | Add comment with test results |
-| Phase 6 Re-Review | Add comment with re-review status |
-| Phase 7 Approval | Transition Epic → "Done", add final approval comment |
-| Phase 8 Next | Trigger next sprint Epic |
-
-### **JIRA Labels Convention**
-
-| Label | Meaning |
-|-------|---------|
-| `phase-2` | Part of Phase 2 development |
-| `mvp-track-2` | MVP Track 2 module |
-| `sprint-1` to `sprint-4` | Sprint assignment |
-| `in-development` | Currently being developed |
-| `in-review` | Under architect review |
-| `in-testing` | Under QA testing |
-| `career-goals`, `health-goals`, etc. | Module identifier |
-| `architect-approved` | Passed architect review |
-| `qa-passed` | Passed QA testing |
-
-### **JIRA API Integration**
-
-```bash
-# Environment Variables
-JIRA_EMAIL="ravuripavan84.2@gmail.com"
-JIRA_URL="https://ravuripavan.atlassian.net"
-
-# Transition Issue to In Progress
-curl -u "${JIRA_EMAIL}:${JIRA_TOKEN}" -X POST \
-  "${JIRA_URL}/rest/api/3/issue/{issueKey}/transitions" \
-  -H "Content-Type: application/json" \
-  -d '{"transition": {"id": "21"}}'
-
-# Add Comment
-curl -u "${JIRA_EMAIL}:${JIRA_TOKEN}" -X POST \
-  "${JIRA_URL}/rest/api/3/issue/{issueKey}/comment" \
-  -H "Content-Type: application/json" \
-  -d '{"body": {"type": "doc", "version": 1, "content": [...]}}'
+## **MANDATORY: PROJECT STATUS UPDATES**
+
+### Status File Location
+```
+docs/project-status/status.md
 ```
 
-### **GitHub Integration**
+### **CRITICAL RULE: Status updates are MANDATORY at START and END of EVERY level**
 
-- **Repository**: https://github.com/ravuripavan/PersonalAssistant
-- **Phase 2 Issue**: https://github.com/ravuripavan/PersonalAssistant/issues/3
-- GitHub issues link to JIRA epics for cross-reference
+The Orchestrator MUST update `docs/project-status/status.md` at ALL granularity levels:
+
+```
+HIERARCHY OF STATUS UPDATES:
+============================
+
+PHASE (e.g., Phase 1 - Planning)
+├── [STATUS: Phase Start]
+├── SUB-PHASE (e.g., Step 1.1 - Product Owner)
+│   ├── [STATUS: Sub-Phase Start]
+│   └── [STATUS: Sub-Phase End]
+├── SUB-PHASE (e.g., Step 1.2 - Requirements Engineer)
+│   ├── [STATUS: Sub-Phase Start]
+│   └── [STATUS: Sub-Phase End]
+├── SUB-PHASE (e.g., Step 1.3 - UX Designer)
+│   ├── [STATUS: Sub-Phase Start]
+│   └── [STATUS: Sub-Phase End]
+├── SUB-PHASE (e.g., Step 1.4 - Architects)
+│   ├── [STATUS: Sub-Phase Start]
+│   └── [STATUS: Sub-Phase End]
+└── [STATUS: Phase End]
+
+WAVE (e.g., Wave 1 - Parallel Development)
+├── [STATUS: Wave Start]
+├── SUB-WAVE / STREAM (e.g., Stream 1 - Module A)
+│   ├── [STATUS: Sub-Wave Start]
+│   └── [STATUS: Sub-Wave End]
+├── SUB-WAVE / STREAM (e.g., Stream 2 - Module B)
+│   ├── [STATUS: Sub-Wave Start]
+│   └── [STATUS: Sub-Wave End]
+├── SUB-WAVE / STREAM (e.g., Stream 3 - Module C)
+│   ├── [STATUS: Sub-Wave Start]
+│   └── [STATUS: Sub-Wave End]
+└── [STATUS: Wave End]
+```
+
+### Status Update Triggers - ALL LEVELS
+
+| Level | Trigger | When to Update | What to Record |
+|-------|---------|----------------|----------------|
+| **PHASE** | Phase Start | Before first sub-phase begins | Phase name, objectives, sub-phases planned |
+| **PHASE** | Phase End | After all sub-phases complete | Duration, deliverables, metrics summary |
+| **SUB-PHASE** | Sub-Phase Start | Before agent begins work | Step number, agent assigned, inputs received |
+| **SUB-PHASE** | Sub-Phase End | After agent completes work | Outputs produced, quality gate result |
+| **WAVE** | Wave Start | Before parallel streams begin | Wave number, streams planned, agent assignments |
+| **WAVE** | Wave End | After all streams complete | Streams completed, aggregate results |
+| **SUB-WAVE** | Sub-Wave/Stream Start | Before stream work begins | Stream ID, module, developer assigned |
+| **SUB-WAVE** | Sub-Wave/Stream End | After stream work completes | Module complete, tests, coverage, files |
+| **REWORK** | Rework Start | When architect requests changes | Issues list, assigned developers |
+| **REWORK** | Rework End | When fixes submitted | Fixes applied, tests updated |
+| **BLOCKER** | Blocker Found | When blocker identified | Blocker details, impact, owner |
+| **BLOCKER** | Blocker Resolved | When blocker cleared | Resolution, duration blocked |
+
+### Status File Template
+
+```markdown
+# Project Status: {PROJECT_NAME}
+
+## Current State
+
+| Field | Value |
+|-------|-------|
+| **Current Phase** | Phase X - {Phase Name} |
+| **Current Sub-Phase** | Step X.Y - {Sub-Phase Name} |
+| **Current Wave** | Wave Y (if applicable) |
+| **Current Stream** | Stream Z (if applicable) |
+| **Status** | {STARTING | IN PROGRESS | BLOCKED | COMPLETE} |
+| **Last Updated** | {YYYY-MM-DD HH:MM} |
+
+## Active Agents
+
+| Agent | Module | Sub-Phase/Stream | Status | Started |
+|-------|--------|------------------|--------|---------|
+| {agent-name} | {module} | {sub-phase/stream} | {Active/Waiting/Complete} | {timestamp} |
+
+## Workflow Progress - Detailed
+
+### Phase 1 - Planning & Design
+
+| Step | Sub-Phase | Agent | Status | Started | Completed |
+|------|-----------|-------|--------|---------|-----------|
+| 1.1 | Product Owner | {project}-product-owner | {status} | {time} | {time} |
+| 1.2 | Requirements Engineer | requirements-engineer | {status} | {time} | {time} |
+| 1.3 | UX/UI Designer | ux-ui-designer | {status} | {time} | {time} |
+| 1.4 | Architecture Design | fullstack/backend/ai-ml-architect | {status} | {time} | {time} |
+
+### Phase 2 - Development (Parallel Waves)
+
+| Wave | Stream | Module | Developer | Status | Tests | Coverage |
+|------|--------|--------|-----------|--------|-------|----------|
+| Wave 1 | Stream 1 | {module} | fullstack-developer-1 | {status} | {count} | {%} |
+| Wave 1 | Stream 2 | {module} | fullstack-developer-2 | {status} | {count} | {%} |
+| Wave 1 | Stream 3 | {module} | fullstack-developer-3 | {status} | {count} | {%} |
+| Wave 1 | Stream 4 | {module} | fullstack-developer-4 | {status} | {count} | {%} |
+
+### Phase 3 - Architect Review
+
+| Step | Sub-Phase | Reviewer | Status | Result | Issues |
+|------|-----------|----------|--------|--------|--------|
+| 3.1 | Full-Stack Review | fullstack-architect | {status} | {Y/N} | {count} |
+| 3.2 | Backend Review | backend-architect | {status} | {Y/N} | {count} |
+| 3.3 | AI/ML Review | ai-ml-architect | {status} | {Y/N} | {count} |
+| 3.4 | Consolidated Decision | All Architects | {status} | {APPROVED/REWORK} | {total} |
+
+### Phase 4 - Rework (if needed)
+
+| Iteration | Step | Sub-Phase | Status | Issues Fixed |
+|-----------|------|-----------|--------|--------------|
+| Iter 1 | 4.1 | Issue Analysis | {status} | - |
+| Iter 1 | 4.2 | Parallel Rework | {status} | {count} |
+| Iter 1 | 4.3 | Verification | {status} | - |
+
+### Phase 5 - Testing (Parallel)
+
+| Step | Sub-Phase | Streams | Status | Passed | Failed | Defects |
+|------|-----------|---------|--------|--------|--------|---------|
+| 5.1 | QA Automation | QA-1, QA-2 | {status} | {count} | {count} | {count} |
+| 5.2 | E2E Testing | E2E-1, E2E-2 | {status} | {count} | {count} | {count} |
+| 5.3 | Visual Testing | Visual-1, Visual-2 | {status} | {count} | {count} | {count} |
+| 5.4 | Consolidation | - | {status} | - | - | - |
+
+### Phase 6 - Final Approval
+
+| Step | Sub-Phase | Approver | Status | Decision |
+|------|-----------|----------|--------|----------|
+| 6.1 | Lead Architect Review | fullstack-architect | {status} | {Y/N} |
+| 6.2 | QA Lead Review | qa-automation-engineer | {status} | {Y/N} |
+| 6.3 | Final Sign-Off | All | {status} | {APPROVED/RETURN} |
+
+### Phase 7 - Wave/Phase Transition
+
+| Step | Sub-Phase | Status | Details |
+|------|-----------|--------|---------|
+| 7.1 | Completion Summary | {status} | {summary} |
+| 7.2 | Next Planning | {status} | {next wave/phase} |
+| 7.3 | Kickoff | {status} | {streams count} |
+
+## Parallel Development Streams (Current Wave)
+
+| Stream | Module | Agent | Status | Progress | Tests | Coverage |
+|--------|--------|-------|--------|----------|-------|----------|
+| Stream 1 | {module} | {developer} | {status} | {details} | {count} | {%} |
+| Stream 2 | {module} | {developer} | {status} | {details} | {count} | {%} |
+| Stream 3 | {module} | {developer} | {status} | {details} | {count} | {%} |
+| Stream 4 | {module} | {developer} | {status} | {details} | {count} | {%} |
+
+## Blockers
+
+| ID | Issue | Phase | Sub-Phase | Impact | Resolution | Owner | Status |
+|----|-------|-------|-----------|--------|------------|-------|--------|
+| B1 | {description} | {phase} | {sub-phase} | {impact} | {plan} | {agent} | {Open/Resolved} |
+
+## Phase History (Completed)
+
+### Phase 1 - Planning & Design
+- **Started**: {timestamp}
+- **Completed**: {timestamp}
+- **Sub-Phases**: 1.1 ✅, 1.2 ✅, 1.3 ✅, 1.4 ✅
+- **Deliverables**: Vision doc, {X} user stories, {Y} requirements, {Z} wireframes, Architecture docs
+
+### Phase 2 - Development
+- **Started**: {timestamp}
+- **Completed**: {timestamp}
+- **Waves Completed**: {count}
+- **Modules Completed**: {count}
+- **Total Unit Tests**: {count} tests
+- **Average Coverage**: {%}
+
+### Phase 3 - Architect Review
+- **Started**: {timestamp}
+- **Completed**: {timestamp}
+- **Sub-Phases**: 3.1 ✅, 3.2 ✅, 3.3 ✅, 3.4 ✅
+- **Final Result**: {APPROVED | REWORK REQUIRED}
+- **Total Issues**: {count}
+
+### Phase 4 - Rework (if applicable)
+- **Iterations**: {count}
+- **Total Issues Fixed**: {count}
+- **Tests Updated**: {count}
+
+### Phase 5 - Testing
+- **Started**: {timestamp}
+- **Completed**: {timestamp}
+- **Sub-Phases**: 5.1 ✅, 5.2 ✅, 5.3 ✅, 5.4 ✅
+- **Total Tests**: {count}
+- **Pass Rate**: {%}
+- **Defects Found**: {count}
+
+### Phase 6 - Final Approval
+- **Started**: {timestamp}
+- **Completed**: {timestamp}
+- **Sub-Phases**: 6.1 ✅, 6.2 ✅, 6.3 ✅
+- **Lead Architect**: ✅ Approved
+- **QA Lead**: ✅ Approved
+
+(Continue for all completed phases/waves...)
+```
 
 ---
 
-If you want, I can also generate:
+## AGENT ROSTER & RESPONSIBILITIES
 
-- A **phase‑gate checklist**  
-- A **YAML/JSON workflow definition**  
-- A **GitHub folder structure** for implementing this  
-- A **step‑by‑step execution script for the Orchestrator**  
+### ORCHESTRATION AGENTS
 
-Just tell me what you want next.
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `{project}-orchestrator` | opus | Master coordinator - manages workflow phases, assigns work, tracks progress, enforces quality gates, **UPDATES STATUS FILE** |
+| `{project}-orchestrator-assistant` | sonnet | Workflow discipline enforcement, status tracking, blocker identification |
+
+### PLANNING & DESIGN AGENTS (Phase 1)
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `{project}-product-owner` | opus | Vision, scope, epics, user stories, acceptance criteria, stakeholder alignment |
+| `requirements-engineer` | sonnet | Functional/non-functional requirements, testable specifications, data requirements |
+| `ux-ui-designer` | sonnet | User flows, wireframes, interaction patterns, design system, accessibility |
+
+### ARCHITECTURE AGENTS (Phase 1)
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `fullstack-architect` | opus | System architecture, cross-platform design, component structure, tech stack decisions |
+| `backend-architect` | opus | API design, data models, service architecture, database schema, security patterns |
+| `ai-ml-architect` | opus | AI/ML architecture, RAG pipelines, LLM integration, embedding strategies, model selection |
+
+### DEVELOPMENT AGENTS (Phase 2) - PARALLEL EXECUTION
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `fullstack-developer` | opus | Lead full-stack implementation, cross-platform development |
+| `fullstack-developer-1` | sonnet | Parallel module development (Module A) |
+| `fullstack-developer-2` | sonnet | Parallel module development (Module B) |
+| `fullstack-developer-3` | sonnet | Parallel module development (Module C) |
+| `fullstack-developer-4` | sonnet | Parallel module development (Module D) |
+| `ml-ai-developer` | opus | Lead AI/ML implementation |
+| `ml-ai-developer-1` | sonnet | Parallel AI component development |
+| `ml-ai-developer-2` | sonnet | Parallel AI component development |
+| `ml-ai-developer-3` | sonnet | Parallel AI component development |
+| `ml-ai-developer-4` | sonnet | Parallel AI component development |
+
+### TESTING AGENTS (Phase 5) - PARALLEL EXECUTION
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `qa-automation-engineer` | sonnet | Lead QA, integration testing, API testing |
+| `qa-automation-engineer-1` | sonnet | Parallel integration testing |
+| `qa-automation-engineer-2` | sonnet | Parallel integration testing |
+| `playwright-e2e-tester` | sonnet | Lead E2E web testing |
+| `playwright-e2e-tester-1` | sonnet | Parallel E2E testing |
+| `playwright-e2e-tester-2` | sonnet | Parallel E2E testing |
+| `visual-automation-tester` | sonnet | Lead visual regression testing |
+| `visual-automation-tester-1` | sonnet | Parallel visual testing |
+| `visual-automation-tester-2` | sonnet | Parallel visual testing |
+
+### DEVOPS AGENTS
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `devops-mlops-engineer` | sonnet | CI/CD pipelines, infrastructure, deployment, MLOps |
+
+### DOMAIN EXPERT AGENTS (Conditional - Finance Domain)
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `finance-meta-controller` | opus | Orchestrates financial agents, routes queries to specialists |
+| `financial-planner-advisor` | sonnet | Comprehensive financial planning, retirement, wealth building |
+| `budgeting-analyzer` | sonnet | Budget analysis, cash flow optimization, spending patterns |
+| `investment-strategy-advisor` | sonnet | Investment strategy, portfolio allocation, risk management |
+| `risk-insurance-advisor` | sonnet | Risk assessment, insurance needs, protection planning |
+| `forecasting-simulation-agent` | sonnet | Financial forecasting, scenario modeling, Monte Carlo simulations |
+| `debt-optimization-advisor` | sonnet | Debt management, repayment strategies, interest optimization |
+
+---
+
+## DETAILED WORKFLOW PHASES
+
+### PHASE 1 - PLANNING & DESIGN
+
+#### **STATUS UPDATE: Phase 1 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 1 - Planning & Design
+- Status: STARTING
+- Timestamp: {now}
+- Assigned Agents: PO, RE, UX, Architects
+```
+
+#### Step 1.1: Product Owner (PO)
+
+##### **STATUS UPDATE: Sub-Phase 1.1 Start**
+```
+- Sub-Phase: 1.1 - Product Owner
+- Status: STARTING
+- Agent: {project}-product-owner
+- Input: Project overview, stakeholder requirements
+- Timestamp: {now}
+```
+
+**Input**: Project overview, stakeholder requirements
+**Output**: Vision document, epics, user stories, acceptance criteria
+
+**Responsibilities**:
+- Define project vision and scope
+- Create epics with clear objectives
+- Write user stories (INVEST format)
+- Define acceptance criteria (Given/When/Then)
+- Prioritize backlog (P1/P2/P3)
+
+**Quality Gate**: All epics have user stories with acceptance criteria
+
+##### **STATUS UPDATE: Sub-Phase 1.1 End**
+```
+- Sub-Phase: 1.1 - Product Owner
+- Status: ✅ COMPLETE
+- Output: Vision doc, {X} epics, {Y} user stories
+- Quality Gate: PASSED
+- Timestamp: {now}
+```
+
+---
+
+#### Step 1.2: Requirements Engineer (RE)
+
+##### **STATUS UPDATE: Sub-Phase 1.2 Start**
+```
+- Sub-Phase: 1.2 - Requirements Engineer
+- Status: STARTING
+- Agent: requirements-engineer
+- Input: PO output (epics, user stories)
+- Timestamp: {now}
+```
+
+**Input**: PO output (epics, user stories)
+**Output**: Functional requirements, non-functional requirements, data requirements
+
+**Responsibilities**:
+- Convert user stories to testable requirements
+- Define functional requirements (WHAT the system does)
+- Define non-functional requirements (HOW the system performs)
+- Specify data requirements and validation rules
+- Identify integration requirements
+
+**Quality Gate**: All requirements are testable and traceable to user stories
+
+##### **STATUS UPDATE: Sub-Phase 1.2 End**
+```
+- Sub-Phase: 1.2 - Requirements Engineer
+- Status: ✅ COMPLETE
+- Output: {X} functional reqs, {Y} non-functional reqs
+- Quality Gate: PASSED
+- Timestamp: {now}
+```
+
+---
+
+#### Step 1.3: UX/UI Designer
+
+##### **STATUS UPDATE: Sub-Phase 1.3 Start**
+```
+- Sub-Phase: 1.3 - UX/UI Designer
+- Status: STARTING
+- Agent: ux-ui-designer
+- Input: PO + RE outputs
+- Timestamp: {now}
+```
+
+**Input**: PO + RE outputs
+**Output**: User flows, wireframes, interaction patterns, design specs
+
+**Responsibilities**:
+- Create user flow diagrams
+- Design wireframes for all screens
+- Define interaction patterns
+- Establish design system components
+- Ensure accessibility compliance (WCAG 2.1 AA)
+
+**Quality Gate**: All user stories have corresponding UX designs
+
+##### **STATUS UPDATE: Sub-Phase 1.3 End**
+```
+- Sub-Phase: 1.3 - UX/UI Designer
+- Status: ✅ COMPLETE
+- Output: {X} user flows, {Y} wireframes
+- Quality Gate: PASSED
+- Timestamp: {now}
+```
+
+---
+
+#### Step 1.4: Architects (Full-Stack, Backend, AI/ML)
+
+##### **STATUS UPDATE: Sub-Phase 1.4 Start**
+```
+- Sub-Phase: 1.4 - Architecture Design
+- Status: STARTING
+- Agents: fullstack-architect, backend-architect, ai-ml-architect
+- Input: PO + RE + UX outputs
+- Timestamp: {now}
+```
+
+**Input**: PO + RE + UX outputs
+**Output**: Architecture documents, API contracts, data models, tech stack decisions
+
+**Responsibilities**:
+
+**Full-Stack Architect**:
+- System architecture design
+- Cross-platform strategy
+- Frontend component architecture
+- State management patterns
+
+**Backend Architect**:
+- API design (REST/GraphQL)
+- Database schema design
+- Service architecture
+- Security patterns
+
+**AI/ML Architect** (if applicable):
+- AI/ML architecture
+- RAG pipeline design
+- Model selection and integration
+- Embedding strategies
+
+**Quality Gate**: Architecture approved by all architects, dependencies identified
+
+##### **STATUS UPDATE: Sub-Phase 1.4 End**
+```
+- Sub-Phase: 1.4 - Architecture Design
+- Status: ✅ COMPLETE
+- Output: System architecture, API contracts, data models
+- Quality Gate: PASSED (All architects approved)
+- Timestamp: {now}
+```
+
+#### **STATUS UPDATE: Phase 1 Complete**
+```
+Orchestrator MUST update status.md:
+- Phase 1 Status: ✅ COMPLETE
+- Completion Time: {now}
+- Deliverables: Vision doc, User stories, Requirements, UX designs, Architecture
+- Next: Phase 2 - Development
+```
+
+---
+
+### PHASE 2 - DEVELOPMENT (PARALLEL EXECUTION)
+
+#### **STATUS UPDATE: Phase 2 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 2 - Development
+- Status: STARTING
+- Timestamp: {now}
+- Parallel Streams: {count}
+- Developer Assignments: {list}
+```
+
+#### Step 2.1: Parallel Development Wave
+
+##### **STATUS UPDATE: Wave Start**
+```
+- Wave: Development Wave {N}
+- Status: STARTING
+- Streams Planned: {count}
+- Timestamp: {now}
+```
+
+**Input**: Approved architecture, requirements, UX designs
+**Output**: Implemented code with unit tests
+
+**Execution Model**:
+- Up to 4 modules developed in parallel
+- Each developer assigned independent module
+- Orchestrator coordinates shared components
+- Dependencies respected (dependent modules wait)
+
+##### **Sub-Wave/Stream Status Updates**
+
+For EACH parallel development stream:
+
+###### **STATUS UPDATE: Sub-Wave/Stream Start**
+```
+- Sub-Wave: Stream {X} - {Module Name}
+- Status: STARTING
+- Developer: {agent-name}
+- Module: {module-name}
+- Input: Architecture spec, requirements for module
+- Timestamp: {now}
+```
+
+**CRITICAL - Unit Testing Requirement**:
+```
+MANDATORY FOR ALL DEVELOPERS:
+1. Write unit tests for ALL new code
+2. Achieve minimum 80% code coverage
+3. Run ALL tests locally before submission
+4. ALL tests MUST pass - no exceptions
+5. Fix failing tests immediately
+```
+
+###### **STATUS UPDATE: Sub-Wave/Stream End**
+```
+- Sub-Wave: Stream {X} - {Module Name}
+- Status: ✅ COMPLETE
+- Developer: {agent-name}
+- Module: {module-name}
+- Unit Tests: {count} tests, {coverage}% coverage
+- Files: {count} files created/modified
+- Quality Gate: PASSED (all tests passing)
+- Timestamp: {now}
+```
+
+**Quality Gate**: All code has passing unit tests with 80%+ coverage
+
+##### **STATUS UPDATE: Wave End**
+```
+- Wave: Development Wave {N}
+- Status: ✅ COMPLETE
+- Streams Completed: {count}
+- Total Files: {count}
+- Total Unit Tests: {count}
+- Average Coverage: {percentage}%
+- Timestamp: {now}
+```
+
+#### **STATUS UPDATE: Phase 2 Complete**
+```
+Orchestrator MUST update status.md:
+- Phase 2 Status: ✅ COMPLETE
+- Completion Time: {now}
+- Total Waves: {count}
+- Modules Completed: {count}
+- Total Unit Tests: {count}
+- Average Coverage: {percentage}%
+- Next: Phase 3 - Architect Review
+```
+
+---
+
+### PHASE 3 - ARCHITECT REVIEW
+
+#### **STATUS UPDATE: Phase 3 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 3 - Architect Review
+- Status: STARTING
+- Timestamp: {now}
+- Reviewers: Full-Stack Architect, Backend Architect, AI/ML Architect
+- Modules Under Review: {list}
+```
+
+#### Step 3.1: Full-Stack Architecture Review
+
+##### **STATUS UPDATE: Sub-Phase 3.1 Start**
+```
+- Sub-Phase: 3.1 - Full-Stack Architecture Review
+- Status: STARTING
+- Reviewer: fullstack-architect
+- Modules: {list}
+- Timestamp: {now}
+```
+
+**Reviewer**: Full-Stack Architect
+
+**Review Focus**:
+- [ ] System architecture patterns followed
+- [ ] Cross-platform consistency verified
+- [ ] Component structure adheres to design
+- [ ] State management patterns correct
+
+##### **STATUS UPDATE: Sub-Phase 3.1 End**
+```
+- Sub-Phase: 3.1 - Full-Stack Architecture Review
+- Status: ✅ COMPLETE
+- Reviewer: fullstack-architect
+- Result: {APPROVED | REWORK REQUIRED}
+- Issues Found: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 3.2: Backend Architecture Review
+
+##### **STATUS UPDATE: Sub-Phase 3.2 Start**
+```
+- Sub-Phase: 3.2 - Backend Architecture Review
+- Status: STARTING
+- Reviewer: backend-architect
+- Modules: {list}
+- Timestamp: {now}
+```
+
+**Reviewer**: Backend Architect
+
+**Review Focus**:
+- [ ] API contracts respected
+- [ ] Data models correct
+- [ ] Security best practices applied
+- [ ] Performance considerations met
+
+##### **STATUS UPDATE: Sub-Phase 3.2 End**
+```
+- Sub-Phase: 3.2 - Backend Architecture Review
+- Status: ✅ COMPLETE
+- Reviewer: backend-architect
+- Result: {APPROVED | REWORK REQUIRED}
+- Issues Found: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 3.3: AI/ML Architecture Review (if applicable)
+
+##### **STATUS UPDATE: Sub-Phase 3.3 Start**
+```
+- Sub-Phase: 3.3 - AI/ML Architecture Review
+- Status: STARTING
+- Reviewer: ai-ml-architect
+- Components: {list}
+- Timestamp: {now}
+```
+
+**Reviewer**: AI/ML Architect
+
+**Review Focus**:
+- [ ] ML pipeline architecture correct
+- [ ] RAG implementation proper
+- [ ] Model integration follows patterns
+- [ ] Embedding strategies appropriate
+
+##### **STATUS UPDATE: Sub-Phase 3.3 End**
+```
+- Sub-Phase: 3.3 - AI/ML Architecture Review
+- Status: ✅ COMPLETE
+- Reviewer: ai-ml-architect
+- Result: {APPROVED | REWORK REQUIRED}
+- Issues Found: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 3.4: Consolidated Review Decision
+
+##### **STATUS UPDATE: Sub-Phase 3.4 Start**
+```
+- Sub-Phase: 3.4 - Consolidated Review Decision
+- Status: STARTING
+- Participants: All Architects
+- Timestamp: {now}
+```
+
+**All Architects Consolidate**:
+- Aggregate review findings
+- Determine final decision
+- Document issues requiring rework (if any)
+
+**Review Outcome**:
+- **APPROVED**: Move to testing phase (requires ALL architects approval)
+- **REWORK REQUIRED**: Return to developers with detailed feedback
+
+##### **STATUS UPDATE: Sub-Phase 3.4 End**
+```
+- Sub-Phase: 3.4 - Consolidated Review Decision
+- Status: ✅ COMPLETE
+- Final Decision: {APPROVED | REWORK REQUIRED}
+- Approvals: FS={Y/N}, BE={Y/N}, AI/ML={Y/N}
+- Timestamp: {now}
+```
+
+#### **STATUS UPDATE: Phase 3 Complete**
+```
+Orchestrator MUST update status.md:
+- Phase 3 Status: {APPROVED | REWORK REQUIRED}
+- Completion Time: {now}
+- Review Result: {summary}
+- Total Issues Found: {count} (if any)
+- Approvals: Full-Stack={Y/N}, Backend={Y/N}, AI/ML={Y/N}
+- Next: {Phase 4 Rework | Phase 5 Testing}
+```
+
+---
+
+### PHASE 4 - REWORK (IF REQUIRED)
+
+#### **STATUS UPDATE: Phase 4 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 4 - Rework (Iteration {N})
+- Status: STARTING
+- Timestamp: {now}
+- Rework Iteration: {iteration number}
+- Issues to Fix: {count}
+- Assigned Developers: {list}
+```
+
+#### Step 4.1: Issue Analysis & Assignment
+
+##### **STATUS UPDATE: Sub-Phase 4.1 Start**
+```
+- Sub-Phase: 4.1 - Issue Analysis & Assignment
+- Status: STARTING
+- Issues Count: {count}
+- Timestamp: {now}
+```
+
+**Process**:
+- Review architect feedback in detail
+- Categorize issues by module
+- Assign issues to appropriate developers
+- Estimate rework effort
+
+##### **STATUS UPDATE: Sub-Phase 4.1 End**
+```
+- Sub-Phase: 4.1 - Issue Analysis & Assignment
+- Status: ✅ COMPLETE
+- Issues Assigned: {count}
+- Developers Assigned: {list}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 4.2: Parallel Rework Streams
+
+##### **STATUS UPDATE: Sub-Phase 4.2 Start**
+```
+- Sub-Phase: 4.2 - Parallel Rework
+- Status: STARTING
+- Rework Streams: {count}
+- Timestamp: {now}
+```
+
+For EACH rework stream:
+
+###### **STATUS UPDATE: Rework Stream Start**
+```
+- Rework Stream: {module/component name}
+- Status: STARTING
+- Developer: {agent-name}
+- Issues Assigned: {count}
+- Timestamp: {now}
+```
+
+**Input**: Architect feedback
+**Output**: Fixed implementation with updated tests
+
+**Developer Process**:
+1. Review architect feedback for assigned issues
+2. Fix identified issues
+3. Update/add unit tests
+4. Verify all tests pass locally
+5. Submit for re-review
+
+###### **STATUS UPDATE: Rework Stream End**
+```
+- Rework Stream: {module/component name}
+- Status: ✅ COMPLETE
+- Developer: {agent-name}
+- Issues Fixed: {count}
+- Tests Updated: {count}
+- All Tests Passing: {YES/NO}
+- Timestamp: {now}
+```
+
+##### **STATUS UPDATE: Sub-Phase 4.2 End**
+```
+- Sub-Phase: 4.2 - Parallel Rework
+- Status: ✅ COMPLETE
+- Total Issues Fixed: {count}
+- Total Tests Updated: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 4.3: Rework Verification
+
+##### **STATUS UPDATE: Sub-Phase 4.3 Start**
+```
+- Sub-Phase: 4.3 - Rework Verification
+- Status: STARTING
+- Verifying: Unit tests, Integration points
+- Timestamp: {now}
+```
+
+**Verification Checklist**:
+- [ ] All identified issues addressed
+- [ ] Unit tests updated and passing
+- [ ] No regressions introduced
+- [ ] Code follows architecture patterns
+
+##### **STATUS UPDATE: Sub-Phase 4.3 End**
+```
+- Sub-Phase: 4.3 - Rework Verification
+- Status: ✅ COMPLETE
+- Verification Result: {PASSED | NEEDS MORE WORK}
+- Timestamp: {now}
+```
+
+#### **STATUS UPDATE: Phase 4 Complete**
+```
+Orchestrator MUST update status.md:
+- Phase 4 Status: ✅ COMPLETE
+- Completion Time: {now}
+- Rework Iteration: {N}
+- Issues Fixed: {count}
+- Tests Updated: {count}
+- Next: Re-submit for Architect Review (Phase 3)
+```
+
+---
+
+### ITERATION LOOP
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│   ARCHITECT REVIEW                              │
+│   [STATUS: Review In Progress]                  │
+│        │                                        │
+│        ├── APPROVED ──→ [STATUS: Approved]     │
+│        │                    ↓                   │
+│        │               NEXT PHASE               │
+│        │                                        │
+│        └── REWORK REQUIRED                      │
+│             [STATUS: Rework Needed]             │
+│                │                                │
+│                ↓                                │
+│        DEVELOPER REWORK                         │
+│        [STATUS: Rework In Progress]             │
+│                │                                │
+│                ↓                                │
+│        [STATUS: Rework Complete]                │
+│                │                                │
+│                └──────→ ARCHITECT REVIEW ──────┘
+│                                                 │
+│   (Loop continues until ALL architects approve) │
+│   [STATUS UPDATE on EVERY iteration]            │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### PHASE 5 - TESTING (After Architect Approval)
+
+#### **STATUS UPDATE: Phase 5 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 5 - Testing
+- Status: STARTING
+- Timestamp: {now}
+- Test Types: Integration, E2E, Visual
+- Test Agents: {list}
+```
+
+#### Step 5.1: QA Automation Testing (PARALLEL)
+
+##### **STATUS UPDATE: Sub-Phase 5.1 Start**
+```
+- Sub-Phase: 5.1 - QA Automation Testing
+- Status: STARTING
+- Testers: qa-automation-engineer-1, qa-automation-engineer-2
+- Test Scope: Integration, API, Functional, Regression
+- Timestamp: {now}
+```
+
+**Testers**: qa-automation-engineer-1, qa-automation-engineer-2 (parallel)
+
+###### **STATUS UPDATE: QA Stream 1 Start**
+```
+- Stream: QA-Stream-1
+- Status: STARTING
+- Tester: qa-automation-engineer-1
+- Modules: {assigned modules}
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: QA Stream 1 End**
+```
+- Stream: QA-Stream-1
+- Status: ✅ COMPLETE
+- Tests Run: {count}
+- Tests Passed: {count}
+- Tests Failed: {count}
+- Defects Found: {count}
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: QA Stream 2 Start**
+```
+- Stream: QA-Stream-2
+- Status: STARTING
+- Tester: qa-automation-engineer-2
+- Modules: {assigned modules}
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: QA Stream 2 End**
+```
+- Stream: QA-Stream-2
+- Status: ✅ COMPLETE
+- Tests Run: {count}
+- Tests Passed: {count}
+- Tests Failed: {count}
+- Defects Found: {count}
+- Timestamp: {now}
+```
+
+**Test Types**:
+- Integration tests
+- API tests
+- Functional tests
+- Regression tests
+
+##### **STATUS UPDATE: Sub-Phase 5.1 End**
+```
+- Sub-Phase: 5.1 - QA Automation Testing
+- Status: ✅ COMPLETE
+- Total Tests: {count}
+- Passed: {count}
+- Failed: {count}
+- Defects: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 5.2: E2E Testing (PARALLEL)
+
+##### **STATUS UPDATE: Sub-Phase 5.2 Start**
+```
+- Sub-Phase: 5.2 - E2E Testing
+- Status: STARTING
+- Testers: playwright-e2e-tester, playwright-e2e-tester-1, playwright-e2e-tester-2
+- Test Scope: User flows, Cross-browser, Critical paths
+- Timestamp: {now}
+```
+
+**Testers**: playwright-e2e-tester, playwright-e2e-tester-1, playwright-e2e-tester-2 (parallel)
+
+###### **STATUS UPDATE: E2E Stream 1 Start**
+```
+- Stream: E2E-Stream-1
+- Status: STARTING
+- Tester: playwright-e2e-tester-1
+- User Flows: {assigned flows}
+- Browsers: Chromium, Firefox
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: E2E Stream 1 End**
+```
+- Stream: E2E-Stream-1
+- Status: ✅ COMPLETE
+- Tests Run: {count}
+- Tests Passed: {count}
+- Tests Failed: {count}
+- Screenshots Captured: {count}
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: E2E Stream 2 Start**
+```
+- Stream: E2E-Stream-2
+- Status: STARTING
+- Tester: playwright-e2e-tester-2
+- User Flows: {assigned flows}
+- Browsers: WebKit, Mobile
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: E2E Stream 2 End**
+```
+- Stream: E2E-Stream-2
+- Status: ✅ COMPLETE
+- Tests Run: {count}
+- Tests Passed: {count}
+- Tests Failed: {count}
+- Screenshots Captured: {count}
+- Timestamp: {now}
+```
+
+**Test Types**:
+- End-to-end user flows
+- Cross-browser testing
+- Critical path validation
+
+##### **STATUS UPDATE: Sub-Phase 5.2 End**
+```
+- Sub-Phase: 5.2 - E2E Testing
+- Status: ✅ COMPLETE
+- Total Tests: {count}
+- Passed: {count}
+- Failed: {count}
+- Browsers Tested: Chromium, Firefox, WebKit, Mobile
+- Timestamp: {now}
+```
+
+---
+
+#### Step 5.3: Visual Testing (PARALLEL)
+
+##### **STATUS UPDATE: Sub-Phase 5.3 Start**
+```
+- Sub-Phase: 5.3 - Visual Testing
+- Status: STARTING
+- Testers: visual-automation-tester-1, visual-automation-tester-2
+- Test Scope: Screenshot comparison, Visual regression
+- Timestamp: {now}
+```
+
+**Testers**: visual-automation-tester-1, visual-automation-tester-2 (parallel)
+
+###### **STATUS UPDATE: Visual Stream 1 Start**
+```
+- Stream: Visual-Stream-1
+- Status: STARTING
+- Tester: visual-automation-tester-1
+- Pages: {assigned pages}
+- Viewports: Desktop, Tablet
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: Visual Stream 1 End**
+```
+- Stream: Visual-Stream-1
+- Status: ✅ COMPLETE
+- Screenshots Compared: {count}
+- Passed: {count}
+- Diffs Detected: {count}
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: Visual Stream 2 Start**
+```
+- Stream: Visual-Stream-2
+- Status: STARTING
+- Tester: visual-automation-tester-2
+- Pages: {assigned pages}
+- Viewports: Mobile, Cross-platform
+- Timestamp: {now}
+```
+
+###### **STATUS UPDATE: Visual Stream 2 End**
+```
+- Stream: Visual-Stream-2
+- Status: ✅ COMPLETE
+- Screenshots Compared: {count}
+- Passed: {count}
+- Diffs Detected: {count}
+- Timestamp: {now}
+```
+
+**Test Types**:
+- Screenshot comparison
+- Visual regression
+- Cross-platform visual consistency
+
+##### **STATUS UPDATE: Sub-Phase 5.3 End**
+```
+- Sub-Phase: 5.3 - Visual Testing
+- Status: ✅ COMPLETE
+- Total Comparisons: {count}
+- Passed: {count}
+- Visual Regressions: {count}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 5.4: Test Results Consolidation
+
+##### **STATUS UPDATE: Sub-Phase 5.4 Start**
+```
+- Sub-Phase: 5.4 - Test Results Consolidation
+- Status: STARTING
+- Consolidating: QA, E2E, Visual results
+- Timestamp: {now}
+```
+
+**Consolidation Process**:
+- Aggregate all test results
+- Categorize defects by severity
+- Determine pass/fail decision
+- Generate test report
+
+##### **STATUS UPDATE: Sub-Phase 5.4 End**
+```
+- Sub-Phase: 5.4 - Test Results Consolidation
+- Status: ✅ COMPLETE
+- Test Report Generated: YES
+- Overall Result: {PASSED | FAILED}
+- Timestamp: {now}
+```
+
+**Quality Gate**: All tests pass (integration + E2E + visual)
+
+#### **STATUS UPDATE: Phase 5 Complete**
+```
+Orchestrator MUST update status.md:
+- Phase 5 Status: {PASSED | FAILED}
+- Completion Time: {now}
+- Integration Tests: {passed}/{total}
+- E2E Tests: {passed}/{total}
+- Visual Tests: {passed}/{total}
+- Total Defects Found: {count}
+- Critical Defects: {count}
+- Next: {Phase 6 Final Approval | Return to Dev for Defect Fixes}
+```
+
+---
+
+### PHASE 6 - FINAL APPROVAL
+
+#### **STATUS UPDATE: Phase 6 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 6 - Final Approval
+- Status: STARTING
+- Timestamp: {now}
+- Approvers: Lead Architect, QA Lead
+```
+
+#### Step 6.1: Lead Architect Final Review
+
+##### **STATUS UPDATE: Sub-Phase 6.1 Start**
+```
+- Sub-Phase: 6.1 - Lead Architect Final Review
+- Status: STARTING
+- Reviewer: fullstack-architect (Lead)
+- Scope: Complete module/wave deliverables
+- Timestamp: {now}
+```
+
+**Reviewer**: Lead Architect (fullstack-architect)
+
+**Review Checklist**:
+- [ ] All requirements met
+- [ ] Architecture approved
+- [ ] Code quality acceptable
+- [ ] No critical defects
+- [ ] Documentation complete
+
+##### **STATUS UPDATE: Sub-Phase 6.1 End**
+```
+- Sub-Phase: 6.1 - Lead Architect Final Review
+- Status: ✅ COMPLETE
+- Result: {APPROVED | NOT APPROVED}
+- Sign-off: Lead Architect {✓ | ✗}
+- Comments: {any notes}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 6.2: QA Lead Final Review
+
+##### **STATUS UPDATE: Sub-Phase 6.2 Start**
+```
+- Sub-Phase: 6.2 - QA Lead Final Review
+- Status: STARTING
+- Reviewer: qa-automation-engineer (Lead)
+- Scope: Test coverage, quality metrics
+- Timestamp: {now}
+```
+
+**Reviewer**: QA Lead (qa-automation-engineer)
+
+**Review Checklist**:
+- [ ] All unit tests passing
+- [ ] All integration tests passing
+- [ ] All E2E tests passing
+- [ ] All visual tests passing
+- [ ] No critical defects open
+- [ ] Test coverage adequate
+
+##### **STATUS UPDATE: Sub-Phase 6.2 End**
+```
+- Sub-Phase: 6.2 - QA Lead Final Review
+- Status: ✅ COMPLETE
+- Result: {APPROVED | NOT APPROVED}
+- Sign-off: QA Lead {✓ | ✗}
+- Test Summary: {passed}/{total} tests passing
+- Timestamp: {now}
+```
+
+---
+
+#### Step 6.3: Final Sign-Off
+
+##### **STATUS UPDATE: Sub-Phase 6.3 Start**
+```
+- Sub-Phase: 6.3 - Final Sign-Off
+- Status: STARTING
+- Awaiting: All approver signatures
+- Timestamp: {now}
+```
+
+**Final Decision**:
+- Both Lead Architect AND QA Lead must approve
+- If either rejects, return to appropriate phase for fixes
+
+##### **STATUS UPDATE: Sub-Phase 6.3 End**
+```
+- Sub-Phase: 6.3 - Final Sign-Off
+- Status: ✅ COMPLETE
+- Lead Architect: {APPROVED | NOT APPROVED}
+- QA Lead: {APPROVED | NOT APPROVED}
+- Final Decision: {APPROVED | RETURN FOR FIXES}
+- Timestamp: {now}
+```
+
+#### **STATUS UPDATE: Phase 6 Complete**
+```
+Orchestrator MUST update status.md:
+- Phase 6 Status: ✅ APPROVED
+- Completion Time: {now}
+- Sign-off: Lead Architect ✓, QA Lead ✓
+- Module/Wave: COMPLETE
+- Deliverables: {summary}
+- Next: Phase 7 - Next Phase/Wave
+```
+
+---
+
+### PHASE 7 - NEXT PHASE/WAVE
+
+#### **STATUS UPDATE: Phase 7 Start**
+```
+Orchestrator MUST update status.md:
+- Current Phase: Phase 7 - Wave/Phase Transition
+- Status: STARTING
+- Previous Wave/Phase: {completed name}
+- Timestamp: {now}
+```
+
+#### Step 7.1: Wave/Phase Completion Summary
+
+##### **STATUS UPDATE: Sub-Phase 7.1 Start**
+```
+- Sub-Phase: 7.1 - Completion Summary
+- Status: STARTING
+- Summarizing: {wave/phase name}
+- Timestamp: {now}
+```
+
+**Completion Documentation**:
+- Record all deliverables
+- Calculate metrics (tests, coverage, duration)
+- Document lessons learned
+- Archive artifacts
+
+##### **STATUS UPDATE: Sub-Phase 7.1 End**
+```
+- Sub-Phase: 7.1 - Completion Summary
+- Status: ✅ COMPLETE
+- Wave/Phase: {name} ✅ COMPLETE
+- Duration: {start} to {end}
+- Modules Delivered: {count}
+- Test Coverage: {percentage}%
+- Timestamp: {now}
+```
+
+---
+
+#### Step 7.2: Next Wave/Phase Planning
+
+##### **STATUS UPDATE: Sub-Phase 7.2 Start**
+```
+- Sub-Phase: 7.2 - Next Wave/Phase Planning
+- Status: STARTING
+- Planning: {next wave/phase name}
+- Timestamp: {now}
+```
+
+**Planning Activities**:
+- Identify next modules/features
+- Assign developers to modules
+- Review dependencies
+- Set objectives and milestones
+
+##### **STATUS UPDATE: Sub-Phase 7.2 End**
+```
+- Sub-Phase: 7.2 - Next Wave/Phase Planning
+- Status: ✅ COMPLETE
+- Next Wave/Phase: {name}
+- Modules Planned: {count}
+- Developers Assigned: {list}
+- Timestamp: {now}
+```
+
+---
+
+#### Step 7.3: Next Wave/Phase Kickoff
+
+##### **STATUS UPDATE: Sub-Phase 7.3 Start**
+```
+- Sub-Phase: 7.3 - Next Wave/Phase Kickoff
+- Status: STARTING
+- Initiating: {next wave/phase name}
+- Timestamp: {now}
+```
+
+**Orchestrator Actions**:
+1. Mark completed modules in status.md
+2. Initialize new wave/phase entry
+3. Assign new modules to available developers
+4. Set up parallel execution streams
+5. Notify all agents of assignments
+
+##### **STATUS UPDATE: Sub-Phase 7.3 End**
+```
+- Sub-Phase: 7.3 - Next Wave/Phase Kickoff
+- Status: ✅ COMPLETE
+- Next Wave/Phase: {name} INITIATED
+- Streams Active: {count}
+- Timestamp: {now}
+```
+
+#### **STATUS UPDATE: Phase 7 Complete / Next Wave/Phase Start**
+```
+Orchestrator MUST update status.md:
+- Phase 7 Status: ✅ COMPLETE (Transition)
+- Previous Wave/Phase: {name} - ARCHIVED
+- Current Phase: {Next Phase Name}
+- Current Wave: {Next Wave Number}
+- Status: STARTING
+- Timestamp: {now}
+- Objectives: {list}
+- Assigned Agents: {list}
+- Parallel Streams: {count}
+```
+
+---
+
+## PARALLEL EXECUTION CAPACITY
+
+| Phase | Max Parallel Tracks | Agents |
+|-------|---------------------|--------|
+| Development | 4 modules | fullstack-developer-1 to -4 |
+| AI Development | 4 components | ml-ai-developer-1 to -4 |
+| QA Testing | 2 modules | qa-automation-engineer-1, -2 |
+| E2E Testing | 3 modules | playwright-e2e-tester, -1, -2 |
+| Visual Testing | 2 modules | visual-automation-tester-1, -2 |
+
+**Total Capacity**: Up to 8 development + 7 testing = 15 parallel workstreams
+
+---
+
+## ORCHESTRATOR RESPONSIBILITIES
+
+### **CRITICAL: Status File Management**
+
+The Orchestrator is **SOLELY RESPONSIBLE** for maintaining `docs/project-status/status.md`.
+
+**Status Update Checklist**:
+- [ ] Update at START of every phase
+- [ ] Update at END of every phase
+- [ ] Update at START of every wave
+- [ ] Update at END of every wave
+- [ ] Update on every rework iteration
+- [ ] Update when blockers occur
+- [ ] Update when blockers are resolved
+
+### Before Each Phase
+- **UPDATE STATUS**: Phase starting, agents assigned
+- Verify prerequisites complete
+- Assign agents to modules
+- Check dependencies
+
+### During Each Phase
+- **UPDATE STATUS**: Progress, blockers, completions
+- Track progress across parallel tracks
+- Manage blockers
+- Coordinate shared resources
+
+### After Each Phase
+- **UPDATE STATUS**: Phase complete, deliverables, metrics
+- Validate quality gates
+- Trigger next phase
+
+---
+
+## WORKFLOW RULES
+
+### Critical Rules
+
+1. **NEVER skip phases** - Each phase must complete before the next begins
+2. **UNIT TESTS ARE MANDATORY** - No code without tests
+3. **ARCHITECT APPROVAL REQUIRED** - All architects must approve before next phase
+4. **PARALLEL RESPECTS DEPENDENCIES** - Dependent modules wait
+5. **STATUS UPDATES ARE MANDATORY** - Update status.md at START and END of EVERY phase/wave
+
+### Quality Gates
+
+| Gate | Requirement | Status Update |
+|------|-------------|---------------|
+| Phase 1 → Phase 2 | All planning artifacts complete | ✅ Phase 1 Complete |
+| Phase 2 → Phase 3 | All unit tests passing (80%+) | ✅ Phase 2 Complete |
+| Phase 3 → Phase 5 | All architects approve | ✅ Review Approved |
+| Phase 5 → Phase 6 | All tests pass | ✅ Testing Complete |
+| Phase 6 → Phase 7 | Final approval received | ✅ Wave/Phase Complete |
+
+---
+
+## SUMMARY
+
+### One-Line Flow
+```
+[STATUS: Start] → PO → RE → UI/UX → ARCHITECTS → [STATUS: Phase 1 Done] → DEV → [STATUS: Phase 2 Done] → ARCHITECT REVIEW → [REWORK + STATUS] → [STATUS: Approved] → TESTING → [STATUS: Tests Done] → FINAL APPROVAL → [STATUS: Complete] → NEXT PHASE/WAVE
+```
+
+### Key Principles
+- **Phase-Gated**: No skipping phases
+- **Parallel Development**: Multiple modules simultaneously
+- **Test-Driven**: Unit tests mandatory
+- **Architect-Approved**: Quality enforced by architects
+- **Iterative**: Rework loop until approval
+- **Status-Tracked**: **MANDATORY updates at START and END of EVERY phase, sub-phase, wave, and sub-wave/stream**
+
+### Complete Status Update Matrix
+
+| Level | Event | When | What to Record |
+|-------|-------|------|----------------|
+| **PHASE** | Phase Start | Before first sub-phase | Phase name, objectives, assigned agents |
+| **PHASE** | Phase End | After last sub-phase | Duration, deliverables, metrics, next phase |
+| **SUB-PHASE** | Sub-Phase Start | Before step begins | Step number, agent, inputs |
+| **SUB-PHASE** | Sub-Phase End | After step completes | Outputs, quality gate result |
+| **WAVE** | Wave Start | Before parallel streams begin | Wave number, streams planned, assignments |
+| **WAVE** | Wave End | After all streams complete | Streams completed, aggregate metrics |
+| **SUB-WAVE/STREAM** | Stream Start | Before stream work begins | Stream ID, module, developer |
+| **SUB-WAVE/STREAM** | Stream End | After stream completes | Module done, tests, coverage, files |
+| **REWORK** | Rework Iteration Start | When rework cycle begins | Iteration number, issues to fix |
+| **REWORK** | Rework Iteration End | When rework submitted | Issues fixed, tests updated |
+| **BLOCKER** | Blocker Found | When blocker identified | Blocker ID, description, impact, owner |
+| **BLOCKER** | Blocker Resolved | When blocker cleared | Resolution, blocked duration |
+
+### Phase → Sub-Phase Breakdown
+
+| Phase | Sub-Phases |
+|-------|------------|
+| Phase 1 | 1.1 PO, 1.2 RE, 1.3 UX, 1.4 Architects |
+| Phase 2 | Wave N: Stream 1-4 (parallel development) |
+| Phase 3 | 3.1 FS Review, 3.2 BE Review, 3.3 AI/ML Review, 3.4 Consolidated |
+| Phase 4 | 4.1 Issue Analysis, 4.2 Parallel Rework, 4.3 Verification |
+| Phase 5 | 5.1 QA (2 streams), 5.2 E2E (2 streams), 5.3 Visual (2 streams), 5.4 Consolidation |
+| Phase 6 | 6.1 Lead Architect, 6.2 QA Lead, 6.3 Final Sign-Off |
+| Phase 7 | 7.1 Completion Summary, 7.2 Next Planning, 7.3 Kickoff |
+
+### Status File Location
+```
+docs/project-status/status.md
+```
+
+### Critical Rules
+1. **EVERY phase** must have START and END status updates
+2. **EVERY sub-phase** must have START and END status updates
+3. **EVERY wave** must have START and END status updates
+4. **EVERY stream** must have START and END status updates
+5. **ALL blockers** must be recorded when found AND when resolved
+6. **Timestamps** are required for all status updates
+7. **Orchestrator** is solely responsible for maintaining status.md

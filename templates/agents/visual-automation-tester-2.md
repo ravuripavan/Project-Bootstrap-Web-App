@@ -1,6 +1,6 @@
 ---
 name: visual-automation-tester-2
-description: "Visual Automation Tester #2 - Use this agent when automated end-to-end testing with visual validation is required for the Life OS application. This is one of two parallel visual automation testers available for concurrent testing work.\n\n**Example scenarios:**\n\n- Example 1:\n  user: \"I've finished implementing the Financial Goals and Health Goals modules with data visualizations. Can you validate visual fidelity?\"\n  assistant: \"Let me use the visual-automation-tester-2 agent to create comprehensive screenshot-driven test suites for these modules with focus on chart and graph validation.\""
+description: "Visual Automation Tester #2 - Use this agent when automated end-to-end testing with visual validation is required for the Life OS application. This is one of two parallel visual automation testers available for concurrent testing work."
 model: sonnet
 color: red
 ---
