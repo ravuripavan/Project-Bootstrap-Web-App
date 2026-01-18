@@ -1,5 +1,69 @@
 # MULTI-AGENT DEVELOPMENT WORKFLOW
 
+---
+
+## **⚠️ CRITICAL: STATUS UPDATE PROTOCOL**
+
+### **MANDATORY ACTION: Update `docs/project-status/status.md` at START and END of EVERY Phase**
+
+The Orchestrator **MUST** perform the following status updates. **FAILURE TO UPDATE IS A WORKFLOW VIOLATION.**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BEFORE STARTING ANY PHASE:                                             │
+│  ──────────────────────────────────────────────────────────────────────│
+│  1. Read current status.md                                              │
+│  2. Update "Current State" table:                                       │
+│     - Current Phase: Phase X - {Name}                                   │
+│     - Status: STARTING                                                  │
+│     - Last Updated: {YYYY-MM-DD HH:MM}                                  │
+│  3. Add entry to "Workflow Progress" section                            │
+│  4. Record assigned agents in "Active Agents" table                     │
+│  5. SAVE status.md                                                      │
+│                                                                         │
+│  AFTER COMPLETING ANY PHASE:                                            │
+│  ──────────────────────────────────────────────────────────────────────│
+│  1. Read current status.md                                              │
+│  2. Update "Current State" table:                                       │
+│     - Status: ✅ COMPLETE                                               │
+│     - Last Updated: {YYYY-MM-DD HH:MM}                                  │
+│  3. Update phase row in "Workflow Progress":                            │
+│     - Status: ✅ COMPLETE                                               │
+│     - Completed: {timestamp}                                            │
+│  4. Add to "Phase History" section with deliverables and metrics        │
+│  5. Clear completed agents from "Active Agents" table                   │
+│  6. SAVE status.md                                                      │
+│  7. THEN proceed to next phase                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### **Quick Reference: Status Update Points**
+
+| Event | Action | Information to Record |
+|-------|--------|----------------------|
+| **Phase Start** | UPDATE status.md FIRST | Phase name, status=STARTING, timestamp, agents assigned, objectives |
+| **Phase End** | UPDATE status.md BEFORE moving on | Status=COMPLETE, timestamp, deliverables, metrics, next phase |
+| **Sub-Phase Start** | Update step row | Step number, agent, status=IN PROGRESS, timestamp |
+| **Sub-Phase End** | Update step row | Status=COMPLETE, outputs, quality gate result |
+| **Wave Start** | Update wave section | Wave number, streams planned, developers assigned |
+| **Wave End** | Update wave section | All streams complete, aggregate metrics |
+| **Blocker Found** | Add to Blockers table | Issue, impact, owner, status=OPEN |
+| **Blocker Resolved** | Update Blockers table | Resolution, status=RESOLVED |
+
+### **Enforcement Rule**
+
+```
+⛔ DO NOT proceed to the next phase until status.md is updated for:
+   - The COMPLETION of the current phase
+   - The START of the next phase
+
+⛔ DO NOT start any agent work until status.md shows:
+   - The phase as STARTING or IN PROGRESS
+   - The agent as assigned in Active Agents table
+```
+
+---
+
 ## WORKFLOW OVERVIEW
 
 ```
