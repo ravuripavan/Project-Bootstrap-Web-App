@@ -4,6 +4,7 @@ from typing import Optional
 import platform
 import subprocess
 import os
+import json
 from pathlib import Path
 
 from app.services.scaffolding_service import ScaffoldingService
@@ -690,30 +691,146 @@ async def get_project_status(project_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/scaffolded-projects")
-async def list_scaffolded_projects():
-    """
-    List all scaffolded projects from the default directory.
-    """
+# Path to store custom project paths
+CUSTOM_PATHS_FILE = Path.home() / ".bootstrap-web-app" / "custom_paths.json"
+
+
+def load_custom_paths() -> list[str]:
+    """Load custom project paths from config file."""
+    if not CUSTOM_PATHS_FILE.exists():
+        return []
     try:
-        base_path = Path.home() / "bootstrapped-projects"
+        with open(CUSTOM_PATHS_FILE, 'r') as f:
+            data = json.load(f)
+            return data.get("paths", [])
+    except Exception:
+        return []
 
-        if not base_path.exists():
-            return {"projects": []}
 
-        projects = []
-        for item in base_path.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
-                status_file = item / "docs" / "project-status" / "status.md"
-                has_status = status_file.exists()
+def save_custom_paths(paths: list[str]):
+    """Save custom project paths to config file."""
+    CUSTOM_PATHS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(CUSTOM_PATHS_FILE, 'w') as f:
+        json.dump({"paths": paths}, f, indent=2)
 
+
+def scan_directory_for_projects(base_path: Path) -> list[dict]:
+    """Scan a directory for projects (directories with .claude folder or status.md)."""
+    projects = []
+    if not base_path.exists() or not base_path.is_dir():
+        return projects
+
+    for item in base_path.iterdir():
+        if item.is_dir() and not item.name.startswith('.'):
+            # Check for project indicators
+            status_file = item / "docs" / "project-status" / "status.md"
+            claude_dir = item / ".claude"
+            has_status = status_file.exists()
+            is_project = has_status or claude_dir.exists()
+
+            if is_project:
                 projects.append({
                     "name": item.name,
                     "path": str(item),
-                    "has_status": has_status
+                    "has_status": has_status,
+                    "source": str(base_path)
                 })
 
-        return {"projects": projects}
+    return projects
+
+
+class CustomPathRequest(BaseModel):
+    path: str
+
+
+class CustomPathsResponse(BaseModel):
+    paths: list[str]
+    default_path: str
+
+
+@router.get("/project-paths", response_model=CustomPathsResponse)
+async def get_project_paths():
+    """Get all configured project paths including default."""
+    default_path = str(Path.home() / "bootstrapped-projects")
+    custom_paths = load_custom_paths()
+    return CustomPathsResponse(
+        paths=custom_paths,
+        default_path=default_path
+    )
+
+
+@router.post("/project-paths")
+async def add_project_path(request: CustomPathRequest):
+    """Add a custom project path."""
+    path = request.path.strip()
+
+    # Validate path exists
+    if not Path(path).exists():
+        raise HTTPException(status_code=400, detail=f"Path does not exist: {path}")
+
+    if not Path(path).is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+
+    # Load existing paths and add new one
+    paths = load_custom_paths()
+    if path not in paths:
+        paths.append(path)
+        save_custom_paths(paths)
+
+    return {"success": True, "paths": paths}
+
+
+@router.delete("/project-paths")
+async def remove_project_path(path: str):
+    """Remove a custom project path."""
+    paths = load_custom_paths()
+    if path in paths:
+        paths.remove(path)
+        save_custom_paths(paths)
+    return {"success": True, "paths": paths}
+
+
+@router.get("/scaffolded-projects")
+async def list_scaffolded_projects(include_custom: bool = True):
+    """
+    List all scaffolded projects from default and custom directories.
+    """
+    try:
+        all_projects = []
+        seen_paths = set()
+
+        # Scan default directory
+        default_path = Path.home() / "bootstrapped-projects"
+        for project in scan_directory_for_projects(default_path):
+            if project["path"] not in seen_paths:
+                seen_paths.add(project["path"])
+                all_projects.append(project)
+
+        # Scan custom directories
+        if include_custom:
+            custom_paths = load_custom_paths()
+            for custom_path in custom_paths:
+                for project in scan_directory_for_projects(Path(custom_path)):
+                    if project["path"] not in seen_paths:
+                        seen_paths.add(project["path"])
+                        all_projects.append(project)
+
+        return {"projects": all_projects}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/scan-path")
+async def scan_path_for_projects(request: CustomPathRequest):
+    """Scan a specific path for projects without adding it to saved paths."""
+    path = request.path.strip()
+
+    if not Path(path).exists():
+        raise HTTPException(status_code=400, detail=f"Path does not exist: {path}")
+
+    if not Path(path).is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+
+    projects = scan_directory_for_projects(Path(path))
+    return {"projects": projects, "path": path}

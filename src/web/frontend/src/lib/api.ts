@@ -198,6 +198,12 @@ export interface ScaffoldedProject {
   name: string;
   path: string;
   has_status: boolean;
+  source?: string;
+}
+
+export interface ProjectPathsResponse {
+  paths: string[];
+  default_path: string;
 }
 
 export const terminalApi = {
@@ -234,6 +240,28 @@ export const terminalApi = {
 
   listScaffoldedProjects: async () => {
     const response = await api.get<{ projects: ScaffoldedProject[] }>('/terminal/scaffolded-projects');
+    return response.data;
+  },
+
+  getProjectPaths: async () => {
+    const response = await api.get<ProjectPathsResponse>('/terminal/project-paths');
+    return response.data;
+  },
+
+  addProjectPath: async (path: string) => {
+    const response = await api.post<{ success: boolean; paths: string[] }>('/terminal/project-paths', { path });
+    return response.data;
+  },
+
+  removeProjectPath: async (path: string) => {
+    const response = await api.delete<{ success: boolean; paths: string[] }>('/terminal/project-paths', {
+      params: { path }
+    });
+    return response.data;
+  },
+
+  scanPath: async (path: string) => {
+    const response = await api.post<{ projects: ScaffoldedProject[]; path: string }>('/terminal/scan-path', { path });
     return response.data;
   },
 };

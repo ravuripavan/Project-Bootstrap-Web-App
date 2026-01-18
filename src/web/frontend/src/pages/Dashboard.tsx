@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Rocket, Zap, Clock, CheckCircle, AlertCircle,
   Bot, Users, Code, Layers, Shield, FileText, TestTube, Settings,
-  ChevronRight, Activity, ChevronDown, ChevronUp
+  ChevronRight, Activity, ChevronDown, ChevronUp, FolderPlus, Trash2, X, Folder
 } from 'lucide-react';
 import { Card, Badge, Progress, Spinner } from '@/components/ui';
 import { projectsApi, terminalApi, Project, Agent, ProjectStatus, ScaffoldedProject } from '@/lib/api';
@@ -43,6 +43,11 @@ export default function Dashboard() {
   const [showProjectStatus, setShowProjectStatus] = useState(true);
   const [showAgents, setShowAgents] = useState(false);
   const [showRecentProjects, setShowRecentProjects] = useState(false);
+  const [showPathManager, setShowPathManager] = useState(false);
+  const [newPath, setNewPath] = useState('');
+  const [pathError, setPathError] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ['projects'],
@@ -60,6 +65,35 @@ export default function Dashboard() {
     queryKey: ['scaffolded-projects'],
     queryFn: () => terminalApi.listScaffoldedProjects(),
     refetchInterval: 10000,
+  });
+
+  // Fetch project paths
+  const { data: pathsData } = useQuery({
+    queryKey: ['project-paths'],
+    queryFn: () => terminalApi.getProjectPaths(),
+  });
+
+  // Add path mutation
+  const addPathMutation = useMutation({
+    mutationFn: (path: string) => terminalApi.addProjectPath(path),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-paths'] });
+      queryClient.invalidateQueries({ queryKey: ['scaffolded-projects'] });
+      setNewPath('');
+      setPathError(null);
+    },
+    onError: (error: any) => {
+      setPathError(error.response?.data?.detail || 'Failed to add path');
+    },
+  });
+
+  // Remove path mutation
+  const removePathMutation = useMutation({
+    mutationFn: (path: string) => terminalApi.removeProjectPath(path),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-paths'] });
+      queryClient.invalidateQueries({ queryKey: ['scaffolded-projects'] });
+    },
   });
 
   // Fetch project status for selected scaffolded project
@@ -154,61 +188,161 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Scaffolded Project Status */}
-      {scaffoldedData?.projects.some(p => p.has_status) && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="border-primary-500/30 bg-gradient-to-r from-primary-500/5 to-accent-500/5">
-            {/* Header with Dropdown */}
-            <div
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => setShowProjectStatus(!showProjectStatus)}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center ${showProjectStatus ? 'animate-pulse' : ''}`}>
-                  <Activity className="w-4 h-4 text-primary-400" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-2">
-                    Project Status
-                    {showProjectStatus ? (
-                      <ChevronUp className="w-4 h-4 text-dark-500" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-dark-500" />
-                    )}
-                  </h2>
-                  <p className="text-xs text-dark-400">Live development progress</p>
-                </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card className="border-primary-500/30 bg-gradient-to-r from-primary-500/5 to-accent-500/5">
+          {/* Header with Dropdown */}
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setShowProjectStatus(!showProjectStatus)}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center ${showProjectStatus ? 'animate-pulse' : ''}`}>
+                <Activity className="w-4 h-4 text-primary-400" />
               </div>
+              <div>
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  Project Status
+                  {showProjectStatus ? (
+                    <ChevronUp className="w-4 h-4 text-dark-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-dark-500" />
+                  )}
+                </h2>
+                <p className="text-xs text-dark-400">
+                  {scaffoldedData?.projects.length || 0} projects from {(pathsData?.paths.length || 0) + 1} locations
+                </p>
+              </div>
+            </div>
 
-              {/* Scaffolded Project Dropdown */}
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
+            {/* Scaffolded Project Dropdown and Settings */}
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <div className="relative">
                 <select
                   value={selectedScaffoldedProject || ''}
                   onChange={(e) => setSelectedScaffoldedProject(e.target.value)}
                   className="appearance-none bg-dark-700 border border-dark-600 rounded-lg px-3 py-1.5 pr-8 text-dark-100 text-xs focus:outline-none focus:border-primary-500 cursor-pointer min-w-[150px]"
                 >
-                  {scaffoldedData?.projects.filter(p => p.has_status).map((project) => (
-                    <option key={project.name} value={project.name}>
-                      {project.name}
+                  <option value="">Select project...</option>
+                  {scaffoldedData?.projects.map((project) => (
+                    <option key={project.path} value={project.name}>
+                      {project.name} {project.has_status ? '✓' : ''}
                     </option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-dark-400 pointer-events-none" />
               </div>
+              <button
+                onClick={() => setShowPathManager(!showPathManager)}
+                className={`p-1.5 rounded-lg transition-colors ${showPathManager ? 'bg-primary-500/20 text-primary-400' : 'bg-dark-700 text-dark-400 hover:text-dark-200'}`}
+                title="Manage project paths"
+              >
+                <FolderPlus className="w-4 h-4" />
+              </button>
             </div>
+          </div>
 
-            {showProjectStatus && (
-              <div className="mt-4">
-                {statusLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Spinner />
+          {/* Path Manager Panel */}
+          <AnimatePresence>
+            {showPathManager && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 p-4 bg-dark-800/50 rounded-lg border border-dark-600">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-dark-200">Project Paths</h3>
+                    <button
+                      onClick={() => setShowPathManager(false)}
+                      className="text-dark-500 hover:text-dark-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                ) : projectStatus ? (
-                  <>
-                    {/* Status Overview */}
+
+                  {/* Add new path */}
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={newPath}
+                      onChange={(e) => {
+                        setNewPath(e.target.value);
+                        setPathError(null);
+                      }}
+                      placeholder="Enter directory path (e.g., C:\Projects)"
+                      className="flex-1 bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-sm text-dark-100 placeholder-dark-500 focus:outline-none focus:border-primary-500"
+                    />
+                    <button
+                      onClick={() => newPath && addPathMutation.mutate(newPath)}
+                      disabled={!newPath || addPathMutation.isPending}
+                      className="px-3 py-2 bg-primary-500/20 text-primary-400 rounded-lg text-sm font-medium hover:bg-primary-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
+                      {addPathMutation.isPending ? <Spinner size="sm" /> : <Plus className="w-4 h-4" />}
+                      Add
+                    </button>
+                  </div>
+
+                  {pathError && (
+                    <p className="text-xs text-red-400 mb-2">{pathError}</p>
+                  )}
+
+                  {/* Paths list */}
+                  <div className="space-y-2">
+                    {/* Default path */}
+                    <div className="flex items-center justify-between bg-dark-700/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-primary-400" />
+                        <span className="text-sm text-dark-200">{pathsData?.default_path || '~/bootstrapped-projects'}</span>
+                        <Badge variant="info" size="sm">Default</Badge>
+                      </div>
+                    </div>
+
+                    {/* Custom paths */}
+                    {pathsData?.paths.map((path) => (
+                      <div key={path} className="flex items-center justify-between bg-dark-700/50 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Folder className="w-4 h-4 text-accent-400" />
+                          <span className="text-sm text-dark-200">{path}</span>
+                          <Badge variant="default" size="sm">Custom</Badge>
+                        </div>
+                        <button
+                          onClick={() => removePathMutation.mutate(path)}
+                          disabled={removePathMutation.isPending}
+                          className="text-dark-500 hover:text-red-400 transition-colors"
+                          title="Remove path"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+
+                    {(!pathsData?.paths || pathsData.paths.length === 0) && (
+                      <p className="text-xs text-dark-500 text-center py-2">No custom paths added yet</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {showProjectStatus && (
+            <div className="mt-4">
+              {!selectedScaffoldedProject ? (
+                <div className="text-center py-6">
+                  <p className="text-dark-400">Select a project to view status</p>
+                </div>
+              ) : statusLoading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner />
+                </div>
+              ) : projectStatus ? (
+                <>
+                  {/* Status Overview */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       <div className="bg-dark-800/50 rounded-lg p-4">
                         <p className="text-xs text-dark-500 uppercase mb-1">Current Phase</p>
@@ -316,17 +450,16 @@ export default function Dashboard() {
                         ))}
                       </div>
                     )}
-                  </>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-dark-400">Select a project to view status</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        </motion.div>
-      )}
+                </>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-dark-400">No status data available for this project</p>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </motion.div>
 
       {/* Available Agents - Collapsible */}
       <motion.div
