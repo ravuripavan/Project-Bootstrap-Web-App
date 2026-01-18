@@ -864,106 +864,152 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Start the full development workflow
-/agent:orchestration start
+/agent:{project_name.lower().replace(" ", "-")}-orchestrator
 
-# Check project status
-/agent:orchestration status
-
-# Move to next phase
-/agent:orchestration next
+# Check project status - always check docs/project-status/status.md
 ```
 
 ## Architecture
 
 ```
 {project_name}/
-├── .claude/agents/          # Agent definitions (20+ agents)
+├── .claude/agents/          # Agent definitions (28+ agents)
 ├── docs/
 │   ├── specs/               # Technical specifications
 │   ├── product/             # Product design documents
 │   ├── architecture/        # Architecture documents
-│   └── project-status/      # Status tracking
+│   └── project-status/      # Status tracking (status.md - CRITICAL)
 ├── src/
-│   ├── orchestrator/        # Orchestration engine
-│   ├── agents/              # Agent implementations
 │   ├── web/
 │   │   ├── frontend/        # {tech_stack.get("frontend", "React")} frontend
 │   │   └── backend/         # {tech_stack.get("backend", "FastAPI")} backend
 │   └── integrations/        # External integrations
 ├── tests/
-│   ├── unit/                # Unit tests
-│   ├── integration/         # Integration tests
-│   └── e2e/                 # End-to-end tests
+│   ├── unit/                # Unit tests (Phase 2.2)
+│   ├── integration/         # Integration tests (Phase 2.3)
+│   ├── api/                 # API tests (Phase 2.4)
+│   └── e2e/                 # End-to-end tests (Phase 2.5)
 └── config/                  # Configuration files
 ```
 
-## Workflow Phases
+## Workflow Phases (7 Phases)
 
-The project follows an 8-phase development workflow:
+### CRITICAL: Status Updates
+**MANDATORY**: Update `docs/project-status/status.md` at START and END of EVERY phase and sub-phase.
 
 ### Phase 1: Planning & Design
-1. **Product Owner** (`/agent:po`) - Defines vision, user stories, acceptance criteria
-2. **Requirements Engineer** (`/agent:requirement`) - Creates detailed requirements
-3. **UX Designer** - Creates user flows and wireframes
-4. **Architects** (`/agent:architecture`, `/agent:backend-architect`, etc.) - Technical design
+| Sub-Phase | Agent | Output |
+|-----------|-------|--------|
+| 1.1 | Product Owner | Vision, epics, user stories |
+| 1.2 | Requirements Engineer | Functional/non-functional requirements |
+| 1.3 | UX/UI Designer | User flows, wireframes |
+| 1.4 | Architects | System architecture, API contracts |
 
-### Phase 2: Development (Parallel)
-- **Full-Stack Developer** (`/agent:fullstack-developer`)
-- **Backend Developer** (`/agent:backend-developer`)
-- **Frontend Developer** (`/agent:frontend-developer`)
-- **AI/ML Developer** (`/agent:aiml-developer`)
+### Phase 2: Development + ALL Tests (Per Module)
+**CRITICAL: Developers MUST write ALL tests with code**
 
-### Phase 3-4: Review & Rework
-- Architect review of implementations
-- Developer fixes based on feedback
+| Sub-Phase | Description | Output |
+|-----------|-------------|--------|
+| 2.1 | Code Implementation | Feature code |
+| 2.2 | Unit Test (UT) Development | Unit tests (80%+ coverage) |
+| 2.3 | Integration Test (INT) Development | Integration tests |
+| 2.4 | API Test Development | API contract tests |
+| 2.5 | E2E Test Development | End-to-end test scenarios |
+| 2.6 | Run ALL Tests | ALL tests must pass before proceeding |
 
-### Phase 5: Testing (Parallel)
-- **QA Engineer** (`/agent:testing`) - Unit and integration tests
-- **E2E Tester** (`/agent:playwright-e2e-tester`) - End-to-end tests
+### Phase 3: Architect Review
+- Full-Stack Architect Review
+- Backend Architect Review
+- AI/ML Architect Review (if applicable)
+- **ALL architects must approve**
 
-### Phase 6-7: Re-Review & Approval
-- Final architect review
-- Lead architect sign-off
+### Phase 4: Rework (If Required)
+- Triggered when ANY architect requests changes
+- Fix issues, update tests, re-submit for review
+- **Loop back to Phase 3 until ALL approve**
 
-### Phase 8: Next Phase
-- Deploy or start next sprint
+### Phase 5: Testing (Execute E2E)
+| Sub-Phase | Description |
+|-----------|-------------|
+| 5.1 | QA Automation (INT + API + Regression) |
+| 5.2 | E2E Test Execution |
+| 5.3 | Visual Regression Testing |
+| 5.4 | Test Results Consolidation |
+| 5.5 | E2E Failure Handling |
 
-## Agent Usage
+**E2E STRICT MODE**: All warnings are treated as errors. Zero tolerance.
 
-### Core Agents
+### Phase 6: Final Approval
+- Lead Architect Final Review
+- QA Lead Final Review
+- Final Sign-Off
+
+### Phase 7: Next Wave/Phase
+- Completion Summary
+- Next Planning
+- Kickoff
+
+## Critical Iterative Loops
+
+```
+LOOP 1: Development → Review → Rework (Per Module)
+═══════════════════════════════════════════════════
+Phase 2 → Phase 3 → Phase 4 → Back to Phase 3
+ITERATE UNTIL ALL ARCHITECTS APPROVE
+
+LOOP 2: E2E Failure → Dev Fix → Re-Test
+═══════════════════════════════════════════════════
+Phase 5 FAIL → Phase 2 → Phase 3 → Phase 4 → Phase 5
+ITERATE UNTIL ALL E2E TESTS PASS
+```
+
+## Agent Roster
+
+### Orchestration Agents
 | Agent | Command | Purpose |
 |-------|---------|---------|
-| orchestration | `/agent:orchestration` | Master coordinator |
-| po | `/agent:po` | Product Owner |
-| requirement | `/agent:requirement` | Requirements Engineer |
+| {project_name.lower().replace(" ", "-")}-orchestrator | `/agent:{project_name.lower().replace(" ", "-")}-orchestrator` | Master coordinator, status management |
+| {project_name.lower().replace(" ", "-")}-orchestrator-assistant | `/agent:{project_name.lower().replace(" ", "-")}-orchestrator-assistant` | Workflow enforcement |
 
-### Architect Agents
+### Planning & Design Agents (Phase 1)
 | Agent | Command | Purpose |
 |-------|---------|---------|
-| architecture | `/agent:architecture` | System architecture |
-| fullstack-architect | `/agent:fullstack-architect` | Full-stack design |
-| backend-architect | `/agent:backend-architect` | Backend/API design |
-| frontend-architect | `/agent:frontend-architect` | Frontend/UI design |
-| database-architect | `/agent:database-architect` | Database design |
-| security-architect | `/agent:security-architect` | Security design |
-| ai-architect | `/agent:ai-architect` | AI/LLM design |
+| {project_name.lower().replace(" ", "-")}-product-owner | `/agent:{project_name.lower().replace(" ", "-")}-product-owner` | Vision, epics, user stories |
+| requirements-engineer | `/agent:requirements-engineer` | Detailed requirements |
+| ux-ui-designer | `/agent:ux-ui-designer` | User flows, wireframes |
 
-### Developer Agents
+### Architect Agents (Phase 1, 3)
 | Agent | Command | Purpose |
 |-------|---------|---------|
-| developer | `/agent:developer` | General development |
-| fullstack-developer | `/agent:fullstack-developer` | Full-stack implementation |
-| backend-developer | `/agent:backend-developer` | Backend implementation |
-| frontend-developer | `/agent:frontend-developer` | Frontend implementation |
-| aiml-developer | `/agent:aiml-developer` | AI/ML implementation |
+| fullstack-architect | `/agent:fullstack-architect` | System architecture (opus) |
+| backend-architect | `/agent:backend-architect` | API/DB design (opus) |
+| ai-ml-architect | `/agent:ai-ml-architect` | AI/ML architecture (opus) |
 
-### Support Agents
+### Developer Agents (Phase 2) - Parallel
 | Agent | Command | Purpose |
 |-------|---------|---------|
-| testing | `/agent:testing` | QA and test creation |
-| playwright-e2e-tester | `/agent:playwright-e2e-tester` | E2E testing |
-| cicd | `/agent:cicd` | CI/CD pipelines |
-| documentation | `/agent:documentation` | Documentation |
+| fullstack-developer | `/agent:fullstack-developer` | Lead full-stack (opus) |
+| fullstack-developer-1 | `/agent:fullstack-developer-1` | Parallel module dev (sonnet) |
+| fullstack-developer-2 | `/agent:fullstack-developer-2` | Parallel module dev (sonnet) |
+| fullstack-developer-3 | `/agent:fullstack-developer-3` | Parallel module dev (sonnet) |
+| fullstack-developer-4 | `/agent:fullstack-developer-4` | Parallel module dev (sonnet) |
+| ml-ai-developer | `/agent:ml-ai-developer` | Lead AI/ML dev (opus) |
+| ml-ai-developer-1 to -4 | `/agent:ml-ai-developer-N` | Parallel AI dev (sonnet) |
+
+### Testing Agents (Phase 5) - Parallel
+| Agent | Command | Purpose |
+|-------|---------|---------|
+| qa-automation-engineer | `/agent:qa-automation-engineer` | Lead QA, INT tests |
+| qa-automation-engineer-1, -2 | `/agent:qa-automation-engineer-N` | Parallel INT testing |
+| playwright-e2e-tester | `/agent:playwright-e2e-tester` | Lead E2E testing |
+| playwright-e2e-tester-1, -2 | `/agent:playwright-e2e-tester-N` | Parallel E2E testing |
+| visual-automation-tester | `/agent:visual-automation-tester` | Lead visual testing |
+| visual-automation-tester-1, -2 | `/agent:visual-automation-tester-N` | Parallel visual testing |
+
+### DevOps Agents
+| Agent | Command | Purpose |
+|-------|---------|---------|
+| devops-mlops-engineer | `/agent:devops-mlops-engineer` | CI/CD, deployment |
 
 ## Tech Stack
 
@@ -974,28 +1020,60 @@ The project follows an 8-phase development workflow:
 
 ## Development Guidelines
 
-### Before Starting Development
-1. Read existing documentation in `docs/`
-2. Follow existing file naming conventions
-3. Update existing documents, don't create duplicates
-4. Use the "Embed Not Add-On" principle
+### Test Requirements (Phase 2)
+```
+MANDATORY FOR ALL CODE:
+- Unit Tests: 80%+ code coverage
+- Integration Tests: All module interactions
+- API Tests: All endpoints validated
+- E2E Tests: All user flows covered
+- ALL TESTS MUST PASS before Phase 3
+```
+
+### E2E Strict Mode (Phase 5)
+```
+⚠️ ZERO TOLERANCE - ALL WARNINGS ARE ERRORS:
+- Console warnings → FAIL
+- Deprecation warnings → FAIL
+- Accessibility warnings → FAIL
+- Performance warnings → FAIL
+- Network failures → FAIL
+- Any warning = RETURN TO DEV
+```
 
 ### Code Standards
-- Write unit tests for all new code
+- Write ALL test types with code (Phase 2)
 - Follow existing code patterns
 - Document public APIs
 - Use type hints (Python) / TypeScript
 
 ### Commit Standards
 - Write clear commit messages
-- Include test files with implementation
+- Include ALL test files with implementation
 - Never commit with failing tests
+- Never commit with warnings in E2E
 
 ## Project Status
 
-Check `docs/project-status/` for:
-- `module-tracking.md` - Module-level status
-- `phase-completion.md` - Phase completion records
+**CRITICAL FILE**: `docs/project-status/status.md`
+
+Updated at START and END of every:
+- Phase
+- Sub-Phase
+- Wave
+- Stream
+- Rework iteration
+- Blocker found/resolved
+
+## Quality Gates
+
+| Gate | Requirement |
+|------|-------------|
+| Phase 1 → 2 | All planning artifacts complete |
+| Phase 2 → 3 | ALL tests passing (UT 80%+, INT, API, E2E) |
+| Phase 3 → 5 | ALL architects approve |
+| Phase 5 → 6 | ALL E2E pass, ZERO warnings |
+| Phase 6 → 7 | Final approval received |
 '''
         self._write_file(project_dir / "CLAUDE.md", claude_md)
         files.append("CLAUDE.md")
