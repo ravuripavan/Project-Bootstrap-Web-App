@@ -96,11 +96,16 @@ export default function Dashboard() {
     },
   });
 
-  // Fetch project status for selected scaffolded project
+  // Check if selected project has status
+  const selectedProjectHasStatus = scaffoldedData?.projects.find(
+    p => p.name === selectedScaffoldedProject
+  )?.has_status;
+
+  // Fetch project status for selected scaffolded project (only if it has status)
   const { data: projectStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['project-status', selectedScaffoldedProject],
     queryFn: () => terminalApi.getProjectStatus(selectedScaffoldedProject!),
-    enabled: !!selectedScaffoldedProject,
+    enabled: !!selectedScaffoldedProject && !!selectedProjectHasStatus,
     refetchInterval: 5000,
   });
 
@@ -451,6 +456,11 @@ export default function Dashboard() {
                       </div>
                     )}
                 </>
+              ) : !selectedProjectHasStatus ? (
+                <div className="text-center py-6">
+                  <p className="text-dark-400">This project has no status.md file yet</p>
+                  <p className="text-xs text-dark-500 mt-1">Status tracking begins when you start the workflow</p>
+                </div>
               ) : (
                 <div className="text-center py-6">
                   <p className="text-dark-400">No status data available for this project</p>
