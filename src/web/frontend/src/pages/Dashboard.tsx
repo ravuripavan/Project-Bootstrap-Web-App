@@ -106,9 +106,11 @@ export default function Dashboard() {
   const { data: projectStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['project-status', selectedScaffoldedProject],
     queryFn: () => terminalApi.getProjectStatus(selectedScaffoldedProject!),
-    enabled: !!selectedScaffoldedProject && selectedProjectHasStatus,
+    enabled: !!scaffoldedData && !!selectedScaffoldedProject && selectedProjectHasStatus,
     refetchInterval: selectedProjectHasStatus ? 5000 : false,
+    refetchOnWindowFocus: selectedProjectHasStatus, // Only refetch on focus if has status
     retry: false, // Don't retry on 404
+    staleTime: selectedProjectHasStatus ? 0 : Infinity, // Don't refetch if no status
   });
 
   // Auto-select first scaffolded project with status
