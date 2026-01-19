@@ -96,17 +96,19 @@ export default function Dashboard() {
     },
   });
 
-  // Check if selected project has status
-  const selectedProjectHasStatus = scaffoldedData?.projects.find(
+  // Find the selected project from scaffolded data
+  const selectedProjectInfo = scaffoldedData?.projects.find(
     p => p.name === selectedScaffoldedProject
-  )?.has_status;
+  );
+  const selectedProjectHasStatus = selectedProjectInfo?.has_status === true;
 
   // Fetch project status for selected scaffolded project (only if it has status)
   const { data: projectStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['project-status', selectedScaffoldedProject],
     queryFn: () => terminalApi.getProjectStatus(selectedScaffoldedProject!),
-    enabled: !!selectedScaffoldedProject && !!selectedProjectHasStatus,
-    refetchInterval: 5000,
+    enabled: !!selectedScaffoldedProject && selectedProjectHasStatus,
+    refetchInterval: selectedProjectHasStatus ? 5000 : false,
+    retry: false, // Don't retry on 404
   });
 
   // Auto-select first scaffolded project with status
