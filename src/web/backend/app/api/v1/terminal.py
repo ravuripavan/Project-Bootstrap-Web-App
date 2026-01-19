@@ -538,13 +538,28 @@ class ProjectStatusResponse(BaseModel):
 async def get_project_status(project_name: str):
     """
     Read project status from the scaffolded project's status.md file.
+    Searches in default and custom project paths.
     """
     try:
-        # Default scaffolded projects location
-        base_path = Path.home() / "bootstrapped-projects" / project_name
-        status_file = base_path / "docs" / "project-status" / "status.md"
+        # Search for the project in all paths
+        status_file = None
 
-        if not status_file.exists():
+        # Check default path first
+        default_path = Path.home() / "bootstrapped-projects" / project_name
+        default_status = default_path / "docs" / "project-status" / "status.md"
+        if default_status.exists():
+            status_file = default_status
+
+        # Check custom paths if not found in default
+        if status_file is None:
+            custom_paths = load_custom_paths()
+            for custom_path in custom_paths:
+                potential_status = Path(custom_path) / project_name / "docs" / "project-status" / "status.md"
+                if potential_status.exists():
+                    status_file = potential_status
+                    break
+
+        if status_file is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Status file not found for project '{project_name}'"
