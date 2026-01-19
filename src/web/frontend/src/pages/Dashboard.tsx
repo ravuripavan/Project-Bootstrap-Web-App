@@ -367,7 +367,11 @@ export default function Dashboard() {
                       </div>
                       <div className="bg-dark-800/50 rounded-lg p-4">
                         <p className="text-xs text-dark-500 uppercase mb-1">Status</p>
-                        <Badge variant={projectStatus.status.includes('PROGRESS') ? 'warning' : 'info'}>
+                        <Badge variant={
+                          projectStatus.status.toUpperCase().includes('COMPLETE') || projectStatus.status.toUpperCase().includes('APPROVED') ? 'success' :
+                          projectStatus.status.toUpperCase().includes('PROGRESS') || projectStatus.status.toUpperCase().includes('ACTIVE') ? 'warning' :
+                          'info'
+                        }>
                           {projectStatus.status}
                         </Badge>
                       </div>
@@ -396,7 +400,11 @@ export default function Dashboard() {
                               <div className="flex items-center gap-3">
                                 <span className="text-xs text-dark-400">{stream.progress}</span>
                                 <Badge
-                                  variant={stream.status.includes('Progress') ? 'warning' : stream.status.includes('Waiting') ? 'info' : 'default'}
+                                  variant={
+                                    stream.status.toUpperCase().includes('COMPLETE') ? 'success' :
+                                    stream.status.toUpperCase().includes('PROGRESS') ? 'warning' :
+                                    stream.status.toUpperCase().includes('WAITING') ? 'info' : 'default'
+                                  }
                                   size="sm"
                                 >
                                   {stream.status}
@@ -419,7 +427,10 @@ export default function Dashboard() {
                               <span className="text-sm text-dark-200">{agent.agent}</span>
                               <span className="text-xs text-dark-500">({agent.module})</span>
                               <Badge
-                                variant={agent.status === 'Active' || agent.status.includes('Progress') ? 'success' : 'default'}
+                                variant={
+                                  agent.status.toUpperCase() === 'ACTIVE' || agent.status.toUpperCase().includes('PROGRESS') ? 'success' :
+                                  agent.status.toUpperCase().includes('COMPLETE') ? 'success' : 'default'
+                                }
                                 size="sm"
                               >
                                 {agent.status}
@@ -435,19 +446,22 @@ export default function Dashboard() {
                       <div className="mb-4">
                         <h3 className="text-sm font-semibold text-dark-300 mb-2">Workflow Progress</h3>
                         <div className="flex flex-wrap gap-1">
-                          {projectStatus.workflow_phases.map((phase, i) => (
-                            <div
-                              key={i}
-                              className={`px-2 py-1 rounded text-xs ${
-                                phase.status.includes('COMPLETE') ? 'bg-emerald-500/20 text-emerald-400' :
-                                phase.status.includes('PROGRESS') || phase.status.includes('STARTING') ? 'bg-primary-500/20 text-primary-400' :
-                                'bg-dark-700 text-dark-500'
-                              }`}
-                              title={`${phase.step}: ${phase.agent} - ${phase.status}`}
-                            >
-                              {phase.step}
-                            </div>
-                          ))}
+                          {projectStatus.workflow_phases.map((phase, i) => {
+                            const statusUpper = phase.status.toUpperCase();
+                            return (
+                              <div
+                                key={i}
+                                className={`px-2 py-1 rounded text-xs ${
+                                  statusUpper.includes('COMPLETE') || statusUpper.includes('APPROVED') ? 'bg-emerald-500/20 text-emerald-400' :
+                                  statusUpper.includes('PROGRESS') || statusUpper.includes('STARTING') || statusUpper.includes('ACTIVE') ? 'bg-primary-500/20 text-primary-400' :
+                                  'bg-dark-700 text-dark-500'
+                                }`}
+                                title={`${phase.step}: ${phase.agent} - ${phase.status}`}
+                              >
+                                {phase.step}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -509,7 +523,7 @@ export default function Dashboard() {
                 </h2>
                 <p className="text-xs text-dark-400">
                   {selectedScaffoldedProject && projectAgentsData
-                    ? `${projectAgentsData.valid_agents} of ${projectAgentsData.total_agents} agents valid`
+                    ? `${projectAgentsData.summary?.valid_agents || 0} of ${projectAgentsData.summary?.total_agents || 0} agents valid`
                     : `${agentsData?.agents.length || 0} agents ready`}
                 </p>
               </div>
@@ -528,34 +542,34 @@ export default function Dashboard() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
                       <div className="bg-dark-800/50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-primary-400">{projectAgentsData.total_agents}</p>
+                        <p className="text-lg font-bold text-primary-400">{projectAgentsData.summary?.total_agents || 0}</p>
                         <p className="text-xs text-dark-500">Total Agents</p>
                       </div>
                       <div className="bg-dark-800/50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-emerald-400">{projectAgentsData.valid_agents}</p>
+                        <p className="text-lg font-bold text-emerald-400">{projectAgentsData.summary?.valid_agents || 0}</p>
                         <p className="text-xs text-dark-500">Valid</p>
                       </div>
                       <div className="bg-dark-800/50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-red-400">{projectAgentsData.invalid_agents}</p>
+                        <p className="text-lg font-bold text-red-400">{projectAgentsData.summary?.agents_with_errors || 0}</p>
                         <p className="text-xs text-dark-500">Invalid</p>
                       </div>
                       <div className="bg-dark-800/50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-accent-400">{projectAgentsData.available_for_cli.length}</p>
+                        <p className="text-lg font-bold text-accent-400">{projectAgentsData.available_agents?.length || 0}</p>
                         <p className="text-xs text-dark-500">CLI Ready</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {projectAgentsData.agents.map((agent) => (
+                      {(projectAgentsData.agent_details || projectAgentsData.available_agents || []).map((agent) => (
                         <div
                           key={agent.name}
                           className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                            agent.status === 'valid'
+                            agent.valid !== false
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'bg-red-500/20 text-red-400'
                           }`}
-                          title={agent.errors.length > 0 ? agent.errors.join(', ') : 'Valid agent'}
+                          title={agent.errors?.length ? agent.errors.join(', ') : `Valid agent: ${agent.file}`}
                         >
-                          {agent.status === 'valid' ? (
+                          {agent.valid !== false ? (
                             <CheckCircle className="w-3 h-3" />
                           ) : (
                             <AlertCircle className="w-3 h-3" />

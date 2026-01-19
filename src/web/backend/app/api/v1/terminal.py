@@ -611,6 +611,24 @@ async def get_project_status(project_name: str):
         if status_match:
             status = status_match.group(1).strip()
 
+        # If no status found, try to derive from Phase Tracking table
+        if not status:
+            # Look for the current phase's status in Phase Tracking
+            phase_status_match = re.search(
+                r'\|\s*' + re.escape(current_phase) + r'\s*\|\s*\*\*([^*]+)\*\*',
+                content
+            )
+            if phase_status_match:
+                status = phase_status_match.group(1).strip()
+            else:
+                # Try to find any IN PROGRESS phase
+                in_progress_match = re.search(
+                    r'\|[^|]+\|\s*\*\*IN PROGRESS\*\*',
+                    content
+                )
+                if in_progress_match:
+                    status = "IN PROGRESS"
+
         updated_match = re.search(
             r'\|\s*\*\*Last Updated\*\*\s*\|\s*([^|\n]+)',
             content
@@ -639,7 +657,7 @@ async def get_project_status(project_name: str):
                             "status": cols[3]
                         })
 
-        # Also try Phase Tracking table format
+        # Also try Phase Tracking table format (Phase | Status | Started | Completed | Notes)
         if not workflow_phases:
             phase_tracking = re.search(
                 r'## Phase Tracking\s*\n+\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n?)+)',
@@ -651,11 +669,34 @@ async def get_project_status(project_name: str):
                     if '|' in row:
                         cols = [c.strip() for c in row.split('|')[1:-1]]
                         if len(cols) >= 2:
+                            # Remove ** markers from status
+                            phase_status = cols[1].replace('**', '').strip() if len(cols) > 1 else ""
                             workflow_phases.append({
                                 "phase": cols[0],
-                                "step": "",
+                                "step": cols[0],  # Use phase name as step for display
                                 "agent": "",
-                                "status": cols[1] if len(cols) > 1 else ""
+                                "status": phase_status
+                            })
+
+        # Parse Sub-Phase tracking tables (Phase 2 Sub-Phases, etc.)
+        if not development_streams:
+            subphase_tracking = re.search(
+                r'### Phase \d+ Sub-Phases[^\n]*\n+\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n?)+)',
+                content
+            )
+            if subphase_tracking:
+                rows = subphase_tracking.group(1).strip().split('\n')
+                for row in rows:
+                    if '|' in row:
+                        cols = [c.strip() for c in row.split('|')[1:-1]]
+                        if len(cols) >= 3:
+                            # Sub-Phase | Module | Status | ...
+                            development_streams.append({
+                                "stream": cols[0],
+                                "module": cols[1],
+                                "agent": "",
+                                "progress": "",
+                                "status": cols[2]
                             })
 
         # Also parse step tracking tables (Phase X Step Tracking)
@@ -676,23 +717,38 @@ async def get_project_status(project_name: str):
                             "status": cols[2] if len(cols) > 2 else ""
                         })
 
-        # Parse Development Streams table
+        # Parse Development Streams table - support multiple header formats
         streams_section = re.search(
+            r'## Development Streams\s*\n+\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n?)+)',
+            content
+        ) or re.search(
             r'### Parallel Development Streams\s*\n\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n)+)',
             content
         )
         if streams_section:
             rows = streams_section.group(1).strip().split('\n')
             for row in rows:
-                cols = [c.strip() for c in row.split('|')[1:-1]]
-                if len(cols) >= 5:
-                    development_streams.append({
-                        "stream": cols[0],
-                        "module": cols[1],
-                        "agent": cols[2],
-                        "status": cols[3],
-                        "progress": cols[4] if len(cols) > 4 else ""
-                    })
+                if '|' in row:
+                    cols = [c.strip() for c in row.split('|')[1:-1]]
+                    if len(cols) >= 5:
+                        # Handle both column orders:
+                        # New: Stream | Module | Agent | Progress | Status
+                        # Old: stream | module | agent | status | progress
+                        development_streams.append({
+                            "stream": cols[0],
+                            "module": cols[1],
+                            "agent": cols[2],
+                            "progress": cols[3],
+                            "status": cols[4]
+                        })
+                    elif len(cols) >= 4:
+                        development_streams.append({
+                            "stream": cols[0],
+                            "module": cols[1],
+                            "agent": cols[2],
+                            "progress": "",
+                            "status": cols[3]
+                        })
 
         # Parse Active Agents table
         agents_section = re.search(

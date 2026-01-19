@@ -1366,24 +1366,73 @@ PO → Requirements → Architecture → Development → Review → Rework → T
         self._write_file(project_dir / "docs" / "architecture" / "overview.md", arch_md)
         files.append("docs/architecture/overview.md")
 
-        # Project Status
+        # Project Status - Standardized Format
+        today = datetime.now().strftime("%Y-%m-%d")
         status_md = f'''# Project Status
 
-## Module Tracking
+## Current Status Overview
 
-| Module | Status | Current Phase | Last Updated |
-|--------|--------|---------------|--------------|
-| Core | Not Started | - | {datetime.now().strftime("%Y-%m-%d")} |
+| Field | Value |
+|-------|-------|
+| **Current Phase** | Phase 1: Planning & Design |
+| **Status** | NOT STARTED |
+| **Current Wave** | Wave 1 |
+| **Last Updated** | {today} |
 
-## Phase Completion
+---
 
-| Phase | Status | Completed Date |
-|-------|--------|----------------|
-| Phase 1: Planning | Not Started | - |
-| Phase 2: Development | Not Started | - |
-| Phase 3: Review | Not Started | - |
-| Phase 5: Testing | Not Started | - |
-| Phase 7: Approval | Not Started | - |
+## Development Streams
+
+| Stream | Module | Agent | Progress | Status |
+|--------|--------|-------|----------|--------|
+| S1001 | Core Module | - | 0% | NOT STARTED |
+
+---
+
+## Workflow Progress
+
+| Phase | Step | Agent | Status |
+|-------|------|-------|--------|
+| Phase 1 | 1.1 Planning | orchestrator | NOT STARTED |
+| Phase 1 | 1.2 Product Design | po | NOT STARTED |
+| Phase 1 | 1.3 Requirements | requirement | NOT STARTED |
+| Phase 1 | 1.4 Architecture | fullstack-architect | NOT STARTED |
+| Phase 2 | 2.1 Code | developer | NOT STARTED |
+| Phase 2 | 2.2 Unit Tests | testing | NOT STARTED |
+| Phase 2 | 2.3 Integration Tests | testing | NOT STARTED |
+| Phase 2 | 2.4 API Tests | testing | NOT STARTED |
+| Phase 2 | 2.5 E2E Tests | testing | NOT STARTED |
+| Phase 2 | 2.6 Run All Tests | testing | NOT STARTED |
+| Phase 3 | 3.1 Architect Review | ALL ARCHITECTS | NOT STARTED |
+| Phase 4 | 4.1 Rework | developer | NOT STARTED |
+| Phase 5 | 5.1 E2E Execution | testing | NOT STARTED |
+| Phase 5 | 5.2 Visual Tests | testing | NOT STARTED |
+| Phase 6 | 6.1 Final Approval | lead-architect | NOT STARTED |
+| Phase 7 | 7.1 Deployment | cicd | NOT STARTED |
+
+---
+
+## Active Agents
+
+| Agent | Role | Module | Status |
+|-------|------|--------|--------|
+| - | - | - | - |
+
+---
+
+## Blockers
+
+| Issue | Impact | Resolution |
+|-------|--------|------------|
+| None | - | - |
+
+---
+
+## History Log
+
+| Timestamp | Event | Agent | Notes |
+|-----------|-------|-------|-------|
+| {today} | PROJECT_CREATED | orchestrator | Project scaffolded |
 '''
         self._write_file(project_dir / "docs" / "project-status" / "status.md", status_md)
         files.append("docs/project-status/status.md")

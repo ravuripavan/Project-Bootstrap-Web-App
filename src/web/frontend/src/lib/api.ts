@@ -209,17 +209,32 @@ export interface ProjectPathsResponse {
 export interface ProjectAgentInfo {
   name: string;
   file: string;
-  status: string;
-  errors: string[];
+  valid: boolean;
+  has_frontmatter: boolean;
+  errors?: string[];
+  warnings?: string[];
+}
+
+export interface AvailableAgent {
+  name: string;
+  command: string;
+  file: string;
+  has_frontmatter: boolean;
 }
 
 export interface ProjectAgentsResponse {
   project_path: string;
-  total_agents: number;
-  valid_agents: number;
-  invalid_agents: number;
-  agents: ProjectAgentInfo[];
-  available_for_cli: string[];
+  valid: boolean;
+  summary: {
+    total_agents: number;
+    valid_agents: number;
+    agents_with_errors: number;
+    agents_with_warnings: number;
+  };
+  available_agents: AvailableAgent[];
+  errors: string[];
+  warnings: string[];
+  agent_details: ProjectAgentInfo[];
 }
 
 export const terminalApi = {
