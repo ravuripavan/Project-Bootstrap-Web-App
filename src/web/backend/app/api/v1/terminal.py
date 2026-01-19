@@ -686,9 +686,12 @@ async def get_project_status(project_name: str):
                         "resolution": cols[2]
                     })
 
+        # Derive project path from status file (status_file is at project/docs/project-status/status.md)
+        project_path = status_file.parent.parent.parent
+
         return ProjectStatusResponse(
             project_name=project_name,
-            project_path=str(base_path),
+            project_path=str(project_path),
             current_phase=current_phase,
             current_wave=current_wave,
             status=status,
