@@ -577,22 +577,34 @@ async def get_project_status(project_name: str):
         active_agents = []
         blockers = []
 
-        # Parse Current State table
+        # Parse Current State table - support both formats:
+        # 1. **Current Phase** | value (old format)
+        # 2. | **Current Phase** | value | (table format)
         state_match = re.search(
+            r'\|\s*\*\*Current Phase\*\*\s*\|\s*([^|\n]+)',
+            content
+        ) or re.search(
             r'\*\*Current Phase\*\*\s*\|\s*([^\n|]+)',
             content
         )
         if state_match:
             current_phase = state_match.group(1).strip()
 
+        # Also try to get Current Step if Current Wave not found
         wave_match = re.search(
-            r'\*\*Current Wave\*\*\s*\|\s*([^\n|]+)',
+            r'\|\s*\*\*Current (?:Wave|Step)\*\*\s*\|\s*([^|\n]+)',
+            content
+        ) or re.search(
+            r'\*\*Current (?:Wave|Step)\*\*\s*\|\s*([^\n|]+)',
             content
         )
         if wave_match:
             current_wave = wave_match.group(1).strip()
 
         status_match = re.search(
+            r'\|\s*\*\*Status\*\*\s*\|\s*([^|\n]+)',
+            content
+        ) or re.search(
             r'\*\*Status\*\*\s*\|\s*([^\n|]+)',
             content
         )
@@ -600,6 +612,9 @@ async def get_project_status(project_name: str):
             status = status_match.group(1).strip()
 
         updated_match = re.search(
+            r'\|\s*\*\*Last Updated\*\*\s*\|\s*([^|\n]+)',
+            content
+        ) or re.search(
             r'\*\*Last Updated\*\*\s*\|\s*([^\n|]+)',
             content
         )
@@ -622,6 +637,43 @@ async def get_project_status(project_name: str):
                             "step": cols[1],
                             "agent": cols[2],
                             "status": cols[3]
+                        })
+
+        # Also try Phase Tracking table format
+        if not workflow_phases:
+            phase_tracking = re.search(
+                r'## Phase Tracking\s*\n+\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n?)+)',
+                content
+            )
+            if phase_tracking:
+                rows = phase_tracking.group(1).strip().split('\n')
+                for row in rows:
+                    if '|' in row:
+                        cols = [c.strip() for c in row.split('|')[1:-1]]
+                        if len(cols) >= 2:
+                            workflow_phases.append({
+                                "phase": cols[0],
+                                "step": "",
+                                "agent": "",
+                                "status": cols[1] if len(cols) > 1 else ""
+                            })
+
+        # Also parse step tracking tables (Phase X Step Tracking)
+        step_tracking = re.search(
+            r'## Phase \d+ Step Tracking\s*\n+\s*\|[^\n]+\n\s*\|[-|\s]+\n((?:\|[^\n]+\n?)+)',
+            content
+        )
+        if step_tracking:
+            rows = step_tracking.group(1).strip().split('\n')
+            for row in rows:
+                if '|' in row:
+                    cols = [c.strip() for c in row.split('|')[1:-1]]
+                    if len(cols) >= 3:
+                        active_agents.append({
+                            "agent": cols[1] if len(cols) > 1 else "",
+                            "role": cols[0] if len(cols) > 0 else "",
+                            "module": cols[3] if len(cols) > 3 else "",
+                            "status": cols[2] if len(cols) > 2 else ""
                         })
 
         # Parse Development Streams table

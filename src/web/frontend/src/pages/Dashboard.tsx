@@ -8,7 +8,7 @@ import {
   ChevronRight, Activity, ChevronDown, ChevronUp, FolderPlus, Trash2, X, Folder
 } from 'lucide-react';
 import { Card, Badge, Progress, Spinner } from '@/components/ui';
-import { projectsApi, terminalApi, Project, Agent, ProjectStatus, ScaffoldedProject } from '@/lib/api';
+import { projectsApi, terminalApi, Project, Agent, ProjectStatus, ScaffoldedProject, ProjectAgentsResponse } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import ScaffoldWorkflow from '@/components/ScaffoldWorkflow';
 
@@ -111,6 +111,14 @@ export default function Dashboard() {
     refetchOnWindowFocus: selectedProjectHasStatus, // Only refetch on focus if has status
     retry: false, // Don't retry on 404
     staleTime: selectedProjectHasStatus ? 0 : Infinity, // Don't refetch if no status
+  });
+
+  // Fetch project agents for selected scaffolded project
+  const { data: projectAgentsData, isLoading: projectAgentsLoading } = useQuery({
+    queryKey: ['project-agents', selectedScaffoldedProject],
+    queryFn: () => terminalApi.getProjectAgents(selectedScaffoldedProject!),
+    enabled: !!selectedScaffoldedProject,
+    retry: false,
   });
 
   // Auto-select first scaffolded project with status
@@ -492,58 +500,115 @@ export default function Dashboard() {
               </div>
               <div>
                 <h2 className="text-sm font-semibold flex items-center gap-2">
-                  Available Agents
+                  {selectedScaffoldedProject ? `${selectedScaffoldedProject} Agents` : 'Available Agents'}
                   {showAgents ? (
                     <ChevronUp className="w-4 h-4 text-dark-500" />
                   ) : (
                     <ChevronDown className="w-4 h-4 text-dark-500" />
                   )}
                 </h2>
-                <p className="text-xs text-dark-400">{agentsData?.agents.length || 0} agents ready</p>
+                <p className="text-xs text-dark-400">
+                  {selectedScaffoldedProject && projectAgentsData
+                    ? `${projectAgentsData.valid_agents} of ${projectAgentsData.total_agents} agents valid`
+                    : `${agentsData?.agents.length || 0} agents ready`}
+                </p>
               </div>
             </div>
           </div>
 
           {showAgents && (
             <div className="mt-4">
-              {agentsLoading ? (
-                <div className="flex justify-center py-4">
-                  <Spinner />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {Object.entries(agentCategoryConfig).map(([category, config]) => {
-                    const agents = agentsByCategory[category] || [];
-                    if (agents.length === 0) return null;
-                    const CategoryIcon = config.icon;
-
-                    return (
-                      <div key={category} className="bg-dark-800/30 rounded-lg p-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className={`w-6 h-6 rounded bg-${config.color}-500/20 flex items-center justify-center`}>
-                            <CategoryIcon className={`w-3 h-3 text-${config.color}-400`} />
-                          </div>
-                          <span className="text-xs font-medium text-dark-300">{config.label}</span>
-                          <span className="text-xs text-dark-500">({agents.length})</span>
-                        </div>
-                        <div className="space-y-1">
-                          {agents.slice(0, 3).map((agent) => (
-                            <div
-                              key={agent.id}
-                              className="text-xs text-dark-400 truncate pl-8"
-                              title={agent.description}
-                            >
-                              {agent.name}
-                            </div>
-                          ))}
-                          {agents.length > 3 && (
-                            <div className="text-xs text-dark-500 pl-8">+{agents.length - 3} more</div>
-                          )}
-                        </div>
+              {selectedScaffoldedProject ? (
+                // Show project-specific agents
+                projectAgentsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Spinner />
+                  </div>
+                ) : projectAgentsData ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+                      <div className="bg-dark-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-primary-400">{projectAgentsData.total_agents}</p>
+                        <p className="text-xs text-dark-500">Total Agents</p>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="bg-dark-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-emerald-400">{projectAgentsData.valid_agents}</p>
+                        <p className="text-xs text-dark-500">Valid</p>
+                      </div>
+                      <div className="bg-dark-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-red-400">{projectAgentsData.invalid_agents}</p>
+                        <p className="text-xs text-dark-500">Invalid</p>
+                      </div>
+                      <div className="bg-dark-800/50 rounded-lg p-2">
+                        <p className="text-lg font-bold text-accent-400">{projectAgentsData.available_for_cli.length}</p>
+                        <p className="text-xs text-dark-500">CLI Ready</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {projectAgentsData.agents.map((agent) => (
+                        <div
+                          key={agent.name}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                            agent.status === 'valid'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}
+                          title={agent.errors.length > 0 ? agent.errors.join(', ') : 'Valid agent'}
+                        >
+                          {agent.status === 'valid' ? (
+                            <CheckCircle className="w-3 h-3" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3" />
+                          )}
+                          {agent.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-dark-400 text-sm text-center py-4">No agent information available</p>
+                )
+              ) : (
+                // Show global agents when no project selected
+                agentsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Spinner />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Object.entries(agentCategoryConfig).map(([category, config]) => {
+                      const agents = agentsByCategory[category] || [];
+                      if (agents.length === 0) return null;
+                      const CategoryIcon = config.icon;
+
+                      return (
+                        <div key={category} className="bg-dark-800/30 rounded-lg p-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-6 h-6 rounded bg-${config.color}-500/20 flex items-center justify-center`}>
+                              <CategoryIcon className={`w-3 h-3 text-${config.color}-400`} />
+                            </div>
+                            <span className="text-xs font-medium text-dark-300">{config.label}</span>
+                            <span className="text-xs text-dark-500">({agents.length})</span>
+                          </div>
+                          <div className="space-y-1">
+                            {agents.slice(0, 3).map((agent) => (
+                              <div
+                                key={agent.id}
+                                className="text-xs text-dark-400 truncate pl-8"
+                                title={agent.description}
+                              >
+                                {agent.name}
+                              </div>
+                            ))}
+                            {agents.length > 3 && (
+                              <div className="text-xs text-dark-500 pl-8">+{agents.length - 3} more</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               )}
             </div>
           )}

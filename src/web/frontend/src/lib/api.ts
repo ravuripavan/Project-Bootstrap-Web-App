@@ -206,6 +206,22 @@ export interface ProjectPathsResponse {
   default_path: string;
 }
 
+export interface ProjectAgentInfo {
+  name: string;
+  file: string;
+  status: string;
+  errors: string[];
+}
+
+export interface ProjectAgentsResponse {
+  project_path: string;
+  total_agents: number;
+  valid_agents: number;
+  invalid_agents: number;
+  agents: ProjectAgentInfo[];
+  available_for_cli: string[];
+}
+
 export const terminalApi = {
   generateCommand: async (data: TerminalCommandRequest) => {
     const response = await api.post<TerminalCommandResponse>('/terminal/command', data);
@@ -262,6 +278,11 @@ export const terminalApi = {
 
   scanPath: async (path: string) => {
     const response = await api.post<{ projects: ScaffoldedProject[]; path: string }>('/terminal/scan-path', { path });
+    return response.data;
+  },
+
+  getProjectAgents: async (projectName: string) => {
+    const response = await api.get<ProjectAgentsResponse>(`/terminal/validate-agents/${projectName}`);
     return response.data;
   },
 };
